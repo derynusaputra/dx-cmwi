@@ -3,6 +3,7 @@ package handlers
 import (
 	"be-test1/config"
 	"be-test1/models"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -26,8 +27,39 @@ type CreatePaintingRequest struct {
 	Judgement      string                 `json:"judgement" binding:"required,oneof=OK NG"`
 }
 
-type UpdateStatusRequest struct {
-	Status string `json:"status" binding:"required,oneof='Pending SPV' 'Pending GL' Approved Rejected"`
+type ApproveRequest struct {
+	Action  string `json:"action" binding:"required,oneof=approved rejected"`
+	Comment string `json:"comment"`
+}
+
+// Mapping: current status → required role that can act on it
+var statusToRole = map[string]string{
+	"Pending GL":  "gl",
+	"Pending SPV": "spv",
+	"Pending AMG": "amg",
+}
+
+// Mapping: current status → next status after approval
+var nextStatus = map[string]string{
+	"Pending GL":  "Pending SPV",
+	"Pending SPV": "Pending AMG",
+	"Pending AMG": "Approved",
+}
+
+// Mapping: current status → role label for rejection message
+var roleLabel = map[string]string{
+	"Pending GL":  "GL",
+	"Pending SPV": "SPV",
+	"Pending AMG": "AMG",
+}
+
+func hasRole(roles []string, target string) bool {
+	for _, r := range roles {
+		if r == target {
+			return true
+		}
+	}
+	return false
 }
 
 func CreatePaintingInspection(c *gin.Context) {
@@ -54,7 +86,7 @@ func CreatePaintingInspection(c *gin.Context) {
 		Attachments:    models.StringArray(req.Attachments),
 		Comment:        req.Comment,
 		Judgement:       req.Judgement,
-		Status:         "Pending SPV",
+		Status:         "Pending GL",
 		SubmittedBy:    userID.(uint),
 	}
 
@@ -86,6 +118,9 @@ func GetPaintingInspections(c *gin.Context) {
 	if judgement := c.Query("judgement"); judgement != "" {
 		query = query.Where("judgement = ?", judgement)
 	}
+	if wheelType := c.Query("wheel_type"); wheelType != "" {
+		query = query.Where("wheel_type = ?", wheelType)
+	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
@@ -100,7 +135,7 @@ func GetPaintingInspections(c *gin.Context) {
 	var total int64
 	query.Model(&models.PaintingInspection{}).Count(&total)
 
-	query.Offset(offset).Limit(limit).Find(&inspections)
+	query.Preload("Approvals").Offset(offset).Limit(limit).Find(&inspections)
 
 	c.JSON(http.StatusOK, gin.H{
 		"data":  inspections,
@@ -114,7 +149,7 @@ func GetPaintingInspection(c *gin.Context) {
 	id := c.Param("id")
 
 	var inspection models.PaintingInspection
-	if err := config.DB.First(&inspection, id).Error; err != nil {
+	if err := config.DB.Preload("Approvals").First(&inspection, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Data tidak ditemukan"})
 		return
 	}
@@ -122,22 +157,89 @@ func GetPaintingInspection(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": inspection})
 }
 
-func UpdatePaintingStatus(c *gin.Context) {
+func ApprovePaintingInspection(c *gin.Context) {
 	id := c.Param("id")
 
-	var req UpdateStatusRequest
+	var req ApproveRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Status tidak valid"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Action harus 'approved' atau 'rejected'"})
 		return
 	}
 
-	result := config.DB.Model(&models.PaintingInspection{}).Where("id = ?", id).Update("status", req.Status)
-	if result.RowsAffected == 0 {
+	// Reject requires a comment
+	if req.Action == "rejected" && req.Comment == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Komentar wajib diisi saat menolak"})
+		return
+	}
+
+	// Get the inspection
+	var inspection models.PaintingInspection
+	if err := config.DB.First(&inspection, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Data tidak ditemukan"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Status berhasil diupdate"})
+	// Check if status is actionable
+	requiredRole, ok := statusToRole[inspection.Status]
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"message": fmt.Sprintf("Status '%s' tidak dapat di-approve/reject", inspection.Status)})
+		return
+	}
+
+	// Check user role - STRICT enforcement: GL can only act on Pending GL, etc.
+	userRoles, _ := c.Get("roles")
+	roles, _ := userRoles.([]string)
+	username, _ := c.Get("username")
+	userID, _ := c.Get("user_id")
+
+	if !hasRole(roles, requiredRole) && !hasRole(roles, "superadmin") && !hasRole(roles, "admin") {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": fmt.Sprintf("Anda tidak memiliki akses. Status saat ini '%s' hanya bisa diproses oleh role '%s'", inspection.Status, requiredRole),
+		})
+		return
+	}
+
+	// Determine new status
+	var newStatus string
+	label := roleLabel[inspection.Status]
+	if req.Action == "approved" {
+		newStatus = nextStatus[inspection.Status]
+	} else {
+		newStatus = fmt.Sprintf("Rejected by %s", label)
+	}
+
+	// Create approval record
+	approval := models.Approval{
+		InspectionID: inspection.ID,
+		Role:         label,
+		Action:       req.Action,
+		Comment:      req.Comment,
+		ApprovedBy:   userID.(uint),
+		ApproverName: username.(string),
+	}
+
+	// Use transaction to ensure atomicity
+	tx := config.DB.Begin()
+
+	if err := tx.Create(&approval).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal menyimpan approval"})
+		return
+	}
+
+	if err := tx.Model(&inspection).Update("status", newStatus).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Gagal update status"})
+		return
+	}
+
+	tx.Commit()
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":    fmt.Sprintf("Berhasil %s oleh %s", req.Action, label),
+		"new_status": newStatus,
+		"approval":   approval,
+	})
 }
 
 func DeletePaintingInspection(c *gin.Context) {
@@ -151,3 +253,4 @@ func DeletePaintingInspection(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Data berhasil dihapus"})
 }
+

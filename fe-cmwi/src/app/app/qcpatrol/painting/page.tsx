@@ -97,7 +97,7 @@ const SmallInputBox = ({ label, name, disabled = false, defaultValue = "", place
         disabled={disabled}
         defaultValue={defaultValue}
         placeholder={placeholder==="-2 ~ +6" ? "-" : placeholder}
-        className="w-full h-full text-center text-sm md:text-base font-semibold text-slate-800 bg-transparent outline-none disabled:text-slate-400 placeholder:text-slate-300"
+        className="w-full h-full text-center text-sm md:text-base font-semibold text-slate-800 bg-transparent outline-none disabled:text-slate-400 placeholder:text-slate-300 text-xs"
       />
     </div>
   </div>
@@ -632,18 +632,18 @@ export default function PaintingQCForm() {
                     <WideInputBox label="Spoke" name="t_spoke" />
                     
                     <WideInputBox label="Flange" name="t_flange" />
-                    <WideInputBox label="Spoke Vert A" name="t_spokeVertA" />
+                    <WideInputBox label="Spoke Vertical A" name="t_spokeVertA" />
                     
-                    <WideInputBox label="Spoke Vert B" name="t_spokeVertB" />
+                    <WideInputBox label="Spoke Vertical B" name="t_spokeVertB" />
                     <WideInputBox label="Bead Inner" name="t_beadInner" />
                     
                     <WideInputBox label="Bead Outer" name="t_beadOuter" />
                     <WideInputBox label="Back Rim (Inner)" name="t_backRimInner" />
                     
                     <WideInputBox label="Back Rim (Outer)" name="t_backRimOuter" />
-                    <WideInputBox label="Back Spoke (In)" name="t_backSpokeIn" />
+                    <WideInputBox label="Back Spoke (Inner)" name="t_backSpokeIn" />
                     
-                    <WideInputBox label="Back Spoke (Out)" name="t_backSpokeOut" />
+                    <WideInputBox label="Back Spoke (Outer)" name="t_backSpokeOut" />
                   </div>
                 </SectionContainer>
 
@@ -651,11 +651,11 @@ export default function PaintingQCForm() {
                 {hasGloss && (
                   <SectionContainer title="Gloss Check (GU)" icon={PaintBucket}>
                     {currentSpec.gloss.machining && (
-                      <div className="flex flex-col gap-3 p-4 rounded-xl border border-slate-200/80 bg-slate-50/30">
+                      <div className="">
                         <span className="text-sm font-bold text-slate-800">Machining Surface</span>
                         <div className="flex justify-between gap-1 sm:gap-2">
                           {[1, 2, 3, 4, 5].map(pos => (
-                            <SmallInputBox key={`m${pos}`} name={`gloss_machining_${pos}`} label={`Pos ${pos}`} placeholder={currentSpec.gloss.machining!} />
+                            <SmallInputBox key={`m${pos}`} name={`gloss_machining_${pos}`} label={`Posisi ${pos}`} placeholder={currentSpec.gloss.machining!} />
                           ))}
                         </div>
                       </div>
@@ -666,7 +666,7 @@ export default function PaintingQCForm() {
                         <span className="text-sm font-bold text-slate-800">Casting Surface</span>
                         <div className="flex justify-between gap-1 sm:gap-2">
                           {[1, 2, 3, 4, 5].map(pos => (
-                            <SmallInputBox key={`c${pos}`} name={`gloss_casting_${pos}`} label={`Pos ${pos}`} placeholder={currentSpec.gloss.casting!} />
+                            <SmallInputBox key={`c${pos}`} name={`gloss_casting_${pos}`} label={`Posisi ${pos}`} placeholder={currentSpec.gloss.casting!} />
                           ))}
                         </div>
                       </div>
@@ -683,6 +683,7 @@ export default function PaintingQCForm() {
                         <option>Line #1</option>
                         <option>Line #2</option>
                         <option>Line #3</option>
+                        <option>Double check</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 pointer-events-none" />
                     </div>

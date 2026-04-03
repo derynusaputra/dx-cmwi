@@ -36,9 +36,7 @@ export default function QcPatrolList() {
                 }}
                 className={`
                   w-full py-5 px-6 rounded-2xl text-base font-extrabold text-left transition-all active:scale-[0.98] shadow-sm flex items-center justify-between border
-                  ${isTargeted 
-                    ? 'bg-[#3b66f5] text-white border-transparent shadow-md hover:bg-[#2b51cc]' 
-                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'}
+                  bg-white text-slate-700 border-slate-200 hover:border-blue-500 hover:text-blue-600 active:bg-[#3b66f5] active:text-white active:border-[#3b66f5] 
                 `}
               >
                 <span>{item}</span>

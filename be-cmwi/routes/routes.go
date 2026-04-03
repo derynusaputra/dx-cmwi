@@ -34,7 +34,7 @@ func SetupRoutes(r *gin.Engine) {
 		painting.POST("", handlers.CreatePaintingInspection)
 		painting.GET("", handlers.GetPaintingInspections)
 		painting.GET("/:id", handlers.GetPaintingInspection)
-		painting.PUT("/:id/status", handlers.UpdatePaintingStatus)
+		painting.PUT("/:id/approve", handlers.ApprovePaintingInspection)
 		painting.DELETE("/:id", handlers.DeletePaintingInspection)
 	}
 }

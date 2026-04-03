@@ -24,9 +24,11 @@ func main() {
 		&models.User{},
 		&models.RefreshToken{},
 		&models.PaintingInspection{},
+		&models.Approval{},
 	)
 
 	config.SeedDefaultUsers()
+	config.SeedApprovalUsers()
 
 	r := gin.Default()
 

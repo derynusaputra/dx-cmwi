@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { apiClient } from "@/lib/axios";
+import { useAuthStore } from "@/stores/authStore";
 import {
   Table,
   TableBody,
@@ -9,6 +10,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+interface Approval {
+  id: number;
+  inspection_id: number;
+  role: string;
+  action: "approved" | "rejected";
+  comment: string;
+  approved_by: number;
+  approver_name: string;
+  created_at: string;
+}
 
 interface PaintingInspection {
   id: number;
@@ -27,6 +39,7 @@ interface PaintingInspection {
   photos: string[];
   attachments: string[];
   comment: string;
+  approvals: Approval[];
   created_at: string;
 }
 
@@ -47,6 +60,10 @@ export default function TablePainting() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterResult, setFilterResult] = useState("All");
+  const [filterWheelType, setFilterWheelType] = useState("All");
+  const [wheelTypeSearch, setWheelTypeSearch] = useState("");
+  const [wheelTypeOpen, setWheelTypeOpen] = useState(false);
+  const wheelTypeRef = useRef<HTMLDivElement>(null);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -56,6 +73,46 @@ export default function TablePainting() {
   const [detailData, setDetailData] = useState<PaintingInspection | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+
+  // Approval
+  const user = useAuthStore((s) => s.user);
+  const [approveLoading, setApproveLoading] = useState(false);
+  const [rejectMode, setRejectMode] = useState(false);
+  const [rejectComment, setRejectComment] = useState("");
+
+  const WHEEL_TYPES = [
+    "18X7A1-CUA-PMS-GY45CLF", "18X7.5A1-CTM-PMS-GY45MF",
+    "17X6A1-CDL-GY45CLF", "17X6A1-CDL-BK01CLF",
+    "D17X6.5A1-DF-PMS-BK01F-ZJ", "D17X6.5A1-DF-PMS-BK01CLF-ZJ",
+    "A17X6.5A1-TM-PMS-GY52F", "A18X7A1-TN1-PMS-BK01CLF",
+    "16X6A1-BGX-PMS-BK01F", "16X6A1-BGX-PMS-GY45CLF",
+    "D18X7A1-DU-PMS-BK01CLF", "D17X6.5A1-DN-PMS-BK01CLF",
+    "A17X6.5A1-TH2-PMS-GY52CLF", "18X7A1-BTY-PMS-GY45CLF-ZJ",
+    "16X7A1-CME-PMS-SV14F", "18X7A1-CHH-PMS-CR08F",
+    "17X6.5A1-CHF-PMS-SV14F-ZJ", "16X6A1-CHC-PMS-SV14F-ZJ",
+    "17X6.5A1-L19-PMS-BK01CLF-ZJ", "16X6A1-CCN-PMS-GY45CLF-ZJ",
+    "A17X6.5A1-SW1-PMS-BK01CLF-ZJ", "A16X6.5A1-SV1-PMS-BK01CLF-ZJ",
+    "18X7.5A1-BQQ-PMS-CR08F-ZJ", "15X5A1-DP-PMS-GY45CLF",
+    "16X6A1-RST-PMS-GY02CLF", "16X6A1-RST-PMS-BK01CLF",
+    "17X7A1-APH-PMS-SV14F", "17X7.5A1-AUQ-PMS-GY45CLF",
+    "16X6A1-AWJ-PMS-GY45CLF", "16X6A1-ATW-PMS-SV14F",
+    "15X5.5A1-DJ-PMS-GY45CLF", "15X5.5A1-AWG-PMS-GY02F",
+  ];
+
+  const filteredWheelTypes = WHEEL_TYPES.filter(wt =>
+    wt.toLowerCase().includes(wheelTypeSearch.toLowerCase())
+  );
+
+  // Close wheel type dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (wheelTypeRef.current && !wheelTypeRef.current.contains(e.target as Node)) {
+        setWheelTypeOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -67,6 +124,7 @@ export default function TablePainting() {
       if (searchTerm) params.search = searchTerm;
       if (filterStatus !== "All") params.status = filterStatus;
       if (filterResult !== "All") params.judgement = filterResult;
+      if (filterWheelType !== "All") params.wheel_type = filterWheelType;
 
       const res = await apiClient.get<ApiResponse>("/painting-inspections", { params });
       setData(res.data.data || []);
@@ -77,7 +135,7 @@ export default function TablePainting() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, rowsPerPage, searchTerm, filterStatus, filterResult]);
+  }, [currentPage, rowsPerPage, searchTerm, filterStatus, filterResult, filterWheelType]);
 
   useEffect(() => {
     fetchData();
@@ -85,7 +143,7 @@ export default function TablePainting() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterStatus, filterResult, rowsPerPage]);
+  }, [searchTerm, filterStatus, filterResult, filterWheelType, rowsPerPage]);
 
   const openDetail = async (id: number) => {
     setDetailOpen(true);
@@ -144,6 +202,56 @@ export default function TablePainting() {
     }
   };
 
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return "-";
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Get approval record for a specific role from an inspection
+  const getApprovalForRole = (approvals: Approval[] | null | undefined, role: string): Approval | undefined => {
+    if (!approvals) return undefined;
+    return approvals.find(a => a.role === role);
+  };
+
+  // Check if current user can approve/reject the current inspection
+  const canUserApprove = (status: string): boolean => {
+    if (!user?.roles) return false;
+    const roleMap: Record<string, string> = {
+      "Pending GL": "gl",
+      "Pending SPV": "spv",
+      "Pending AMG": "amg",
+    };
+    const requiredRole = roleMap[status];
+    if (!requiredRole) return false;
+    return user.roles.includes(requiredRole) || user.roles.includes("superadmin") || user.roles.includes("admin");
+  };
+
+  const handleApproval = async (action: "approved" | "rejected", comment?: string) => {
+    if (!detailData) return;
+    setApproveLoading(true);
+    try {
+      await apiClient.put(`/painting-inspections/${detailData.id}/approve`, { action, comment: comment || "" });
+      // Refresh detail
+      const res = await apiClient.get<{ data: PaintingInspection }>(`/painting-inspections/${detailData.id}`);
+      setDetailData(res.data.data);
+      setRejectMode(false);
+      setRejectComment("");
+      // Refresh table
+      fetchData();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Gagal memproses approval";
+      alert(msg);
+    } finally {
+      setApproveLoading(false);
+    }
+  };
+
   const renderPaginationButtons = () => {
     const buttons = [];
     const maxVisible = 5;
@@ -174,16 +282,15 @@ export default function TablePainting() {
   };
 
   const statusColor = (s: string) =>
-    s === "Approved" ? "bg-green-500" : s === "Rejected" ? "bg-red-500" : s === "Pending GL" ? "bg-blue-500" : "bg-yellow-500";
+    s === "Approved" ? "bg-green-500" : s.startsWith("Rejected") ? "bg-red-500" : s === "Pending GL" ? "bg-blue-500" : s === "Pending SPV" ? "bg-yellow-500" : s === "Pending AMG" ? "bg-orange-500" : "bg-gray-400";
 
   const statusBadge = (s: string) => {
-    const colors: Record<string, string> = {
-      "Approved": "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-900/30 dark:text-emerald-400",
-      "Rejected": "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-900/30 dark:text-red-400",
-      "Pending GL": "bg-blue-50 text-blue-700 ring-blue-600/20 dark:bg-blue-900/30 dark:text-blue-400",
-      "Pending SPV": "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-900/30 dark:text-amber-400",
-    };
-    return colors[s] || "bg-gray-50 text-gray-700 ring-gray-600/20";
+    if (s === "Approved") return "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-900/30 dark:text-emerald-400";
+    if (s.startsWith("Rejected")) return "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-900/30 dark:text-red-400";
+    if (s === "Pending GL") return "bg-blue-50 text-blue-700 ring-blue-600/20 dark:bg-blue-900/30 dark:text-blue-400";
+    if (s === "Pending SPV") return "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-900/30 dark:text-amber-400";
+    if (s === "Pending AMG") return "bg-orange-50 text-orange-700 ring-orange-600/20 dark:bg-orange-900/30 dark:text-orange-400";
+    return "bg-gray-50 text-gray-700 ring-gray-600/20";
   };
 
   return (
@@ -214,10 +321,13 @@ export default function TablePainting() {
                 className="appearance-none block w-full px-4 py-2.5 pr-10 text-sm text-gray-900 bg-transparent focus:outline-none dark:text-white cursor-pointer"
               >
                 <option value="All">Status</option>
-                <option value="Pending SPV">Pending SPV</option>
                 <option value="Pending GL">Pending GL</option>
+                <option value="Pending SPV">Pending SPV</option>
+                <option value="Pending AMG">Pending AMG</option>
                 <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
+                <option value="Rejected by GL">Rejected by GL</option>
+                <option value="Rejected by SPV">Rejected by SPV</option>
+                <option value="Rejected by AMG">Rejected by AMG</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -239,11 +349,76 @@ export default function TablePainting() {
               </div>
             </div>
 
+            {/* Wheel Type Searchable Dropdown */}
+            <div className="relative" ref={wheelTypeRef}>
+              <button
+                type="button"
+                onClick={() => { setWheelTypeOpen(o => !o); setWheelTypeSearch(""); }}
+                className={`flex items-center gap-2 px-4 py-2.5 pr-10 text-sm rounded-lg border transition-colors w-[180px] text-left ${
+                  filterWheelType !== "All"
+                    ? "border-violet-400 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-600"
+                    : "border-gray-200 bg-white text-gray-900 dark:bg-[#121212] dark:text-white dark:border-white/10"
+                }`}
+              >
+                <span className="truncate flex-1">{filterWheelType === "All" ? "Wheel Type" : filterWheelType}</span>
+                <svg className={`w-4 h-4 shrink-0 transition-transform absolute right-2.5 ${ wheelTypeOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+
+              {wheelTypeOpen && (
+                <div className="absolute top-[calc(100%+6px)] right-0 z-50 w-72 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden">
+                  {/* Search input */}
+                  <div className="p-2 border-b border-gray-100 dark:border-white/5">
+                    <div className="relative">
+                      <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                      <input
+                        autoFocus
+                        type="text"
+                        placeholder="Cari wheel type..."
+                        value={wheelTypeSearch}
+                        onChange={(e) => setWheelTypeSearch(e.target.value)}
+                        className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400 text-gray-800 dark:text-white placeholder-gray-400 transition-all"
+                      />
+                    </div>
+                  </div>
+                  {/* Options list */}
+                  <div className="max-h-52 overflow-y-auto">
+                    <button
+                      type="button"
+                      onClick={() => { setFilterWheelType("All"); setWheelTypeOpen(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                        filterWheelType === "All"
+                          ? "bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 font-semibold"
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
+                      }`}
+                    >
+                      Semua Tipe
+                    </button>
+                    {filteredWheelTypes.length > 0 ? filteredWheelTypes.map(wt => (
+                      <button
+                        key={wt}
+                        type="button"
+                        onClick={() => { setFilterWheelType(wt); setWheelTypeOpen(false); setWheelTypeSearch(""); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-t border-gray-50 dark:border-white/5 ${
+                          filterWheelType === wt
+                            ? "bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 font-semibold"
+                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
+                        }`}
+                      >
+                        {wt}
+                      </button>
+                    )) : (
+                      <div className="px-4 py-4 text-sm text-gray-400 text-center italic">Tidak ditemukan</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleExportCSV}
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 transition-colors whitespace-nowrap"
             >
-              Export CSV
+              Export Excel
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
               </svg>
@@ -252,8 +427,47 @@ export default function TablePainting() {
         </div>
 
         <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
-          <div>Total {total} records</div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>Total {total} records</span>
+            {/* Active Filter Chips */}
+            {filterStatus !== "All" && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs font-semibold ring-1 ring-blue-200 dark:ring-blue-700">
+                Status: {filterStatus}
+                <button onClick={() => setFilterStatus("All")} className="hover:text-blue-900 dark:hover:text-white transition-colors">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </span>
+            )}
+            {filterResult !== "All" && (
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ring-1 ${
+                filterResult === "OK"
+                  ? "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-700"
+                  : "bg-red-50 text-red-700 ring-red-200 dark:bg-red-900/30 dark:text-red-300 dark:ring-red-700"
+              }`}>
+                Result: {filterResult}
+                <button onClick={() => setFilterResult("All")} className="hover:opacity-70 transition-opacity">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </span>
+            )}
+            {filterWheelType !== "All" && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 text-xs font-semibold ring-1 ring-violet-200 dark:ring-violet-700 max-w-[200px]">
+                <span className="truncate">{filterWheelType}</span>
+                <button onClick={() => setFilterWheelType("All")} className="shrink-0 hover:text-violet-900 dark:hover:text-white transition-colors">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </span>
+            )}
+            {(filterStatus !== "All" || filterResult !== "All" || filterWheelType !== "All") && (
+              <button
+                onClick={() => { setFilterStatus("All"); setFilterResult("All"); setFilterWheelType("All"); }}
+                className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline underline-offset-2 transition-colors"
+              >
+                Reset semua
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             Rows per page:
             <select
               value={rowsPerPage}
@@ -283,11 +497,11 @@ export default function TablePainting() {
                       className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                     />
                   </TableCell>
-                  {["DATE", "INSPECTOR", "LINE", "WHEEL TYPE", "RESULT", "STATUS", "ACTIONS"].map(h => (
+                  {["DATE", "INSPECTOR", "LINE", "WHEEL TYPE", "RESULT", "STATUS", "APPROVAL", "ACTIONS"].map(h => (
                     <TableCell
                       key={h}
                       isHeader
-                      className={`px-5 py-4 font-semibold text-gray-500 text-xs tracking-wider uppercase dark:text-gray-400 ${h === "ACTIONS" ? "text-end" : "text-start"}`}
+                      className={`px-5 py-4 font-semibold text-gray-500 text-xs tracking-wider uppercase dark:text-gray-400 ${h === "ACTIONS" ? "text-end" : h === "APPROVAL" ? "text-center" : "text-start"}`}
                     >
                       {h}
                     </TableCell>
@@ -298,7 +512,7 @@ export default function TablePainting() {
               <TableBody className="divide-y divide-gray-100 dark:divide-white/5">
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="px-5 py-12 text-center text-gray-400">
+                    <TableCell colSpan={9} className="px-5 py-12 text-center text-gray-400">
                       <div className="flex items-center justify-center gap-2">
                         <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                         Loading...
@@ -340,6 +554,30 @@ export default function TablePainting() {
                           <span className="text-gray-900 dark:text-gray-300">{row.status}</span>
                         </div>
                       </TableCell>
+                      <TableCell className="px-5 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {["GL", "SPV", "AMG"].map((role) => {
+                            const approval = getApprovalForRole(row.approvals, role);
+                            const isApproved = approval?.action === "approved";
+                            const isRejected = approval?.action === "rejected";
+                            return (
+                              <span
+                                key={role}
+                                title={approval ? `${role}: ${approval.action} oleh ${approval.approver_name}` : `${role}: Belum diproses`}
+                                className={`inline-flex items-center justify-center w-8 h-6 text-[9px] font-bold rounded-md cursor-default ${
+                                  isApproved
+                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                    : isRejected
+                                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                    : "bg-gray-100 text-gray-400 dark:bg-white/5 dark:text-gray-500"
+                                }`}
+                              >
+                                {isApproved ? "✓" : isRejected ? "✗" : "–"}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </TableCell>
                       <TableCell className="px-5 py-4 text-end">
                         <button
                           onClick={() => openDetail(row.id)}
@@ -356,7 +594,7 @@ export default function TablePainting() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="px-5 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <TableCell colSpan={9} className="px-5 py-12 text-center text-gray-500 dark:text-gray-400">
                       Belum ada data inspection.
                     </TableCell>
                   </TableRow>
@@ -492,7 +730,7 @@ export default function TablePainting() {
                   {/* Thickness */}
                   {detailData.thickness && Object.keys(detailData.thickness).length > 0 && (
                     <section>
-                      <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Thickness (um)</h3>
+                      <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Thickness (µm)</h3>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {Object.entries(detailData.thickness).map(([key, val]) => (
                           <div key={key} className="rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 bg-gray-50/50 dark:bg-white/2">
@@ -595,6 +833,130 @@ export default function TablePainting() {
                       <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/2 px-5 py-4">
                         <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{detailData.comment}</p>
                       </div>
+                    </section>
+                  )}
+
+                  {/* Daftar Persetujuan */}
+                  <section>
+                    <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Daftar Persetujuan</h3>
+                    <div className="space-y-0">
+                      {["GL", "SPV", "AMG"].map((role, idx) => {
+                        const approval = getApprovalForRole(detailData.approvals, role);
+                        const isApproved = approval?.action === "approved";
+                        const isRejected = approval?.action === "rejected";
+                        const isPending = !approval;
+                        const roleFull: Record<string, string> = { GL: "Group Leader", SPV: "Supervisor", AMG: "Asst. Manager" };
+
+                        return (
+                          <div key={role} className="relative">
+                            {/* Connector line */}
+                            {idx < 2 && (
+                              <div className={`absolute left-5 top-12 w-0.5 h-8 ${isPending ? "bg-gray-200 dark:bg-white/10" : isApproved ? "bg-emerald-300 dark:bg-emerald-700" : "bg-red-300 dark:bg-red-700"}`} />
+                            )}
+                            <div className={`flex items-start gap-4 p-4 rounded-xl mb-2 transition-colors ${isPending ? "bg-gray-50/50 dark:bg-white/2" : isApproved ? "bg-emerald-50/50 dark:bg-emerald-900/10" : "bg-red-50/50 dark:bg-red-900/10"}`}>
+                              {/* Avatar */}
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
+                                isPending
+                                  ? "bg-gray-200 text-gray-500 dark:bg-white/10 dark:text-gray-400"
+                                  : isApproved
+                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                                  : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                              }`}>
+                                {approval ? approval.approver_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : role}
+                              </div>
+                              {/* Info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-2">
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                    {approval ? approval.approver_name : `Menunggu ${role}`}
+                                  </p>
+                                </div>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400">{roleFull[role]}</p>
+                                {approval?.comment && (
+                                  <div className="mt-2 rounded-lg bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 px-3 py-2">
+                                    <p className="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap">&ldquo;{approval.comment}&rdquo;</p>
+                                  </div>
+                                )}
+                              </div>
+                              {/* Status & Date */}
+                              <div className="text-right shrink-0">
+                                <span className={`inline-flex px-2.5 py-1 text-[10px] font-bold rounded-full ${
+                                  isPending
+                                    ? "bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400"
+                                    : isApproved
+                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                }`}>
+                                  {isPending ? "Menunggu" : isApproved ? "Disetujui" : "Ditolak"}
+                                </span>
+                                {approval && (
+                                  <p className="text-[10px] text-gray-400 mt-1">{formatDateTime(approval.created_at)}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  {/* Approve / Reject Actions */}
+                  {canUserApprove(detailData.status) && (
+                    <section className="border-t border-gray-200 dark:border-white/10 pt-6">
+                      <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Aksi Persetujuan</h3>
+                      
+                      {!rejectMode ? (
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => handleApproval("approved")}
+                            disabled={approveLoading}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-xl shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50"
+                          >
+                            {approveLoading ? (
+                              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"/></svg>
+                            )}
+                            Setujui
+                          </button>
+                          <button
+                            onClick={() => setRejectMode(true)}
+                            disabled={approveLoading}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm rounded-xl shadow-lg shadow-red-600/20 transition-all disabled:opacity-50"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                            Tolak
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <textarea
+                            value={rejectComment}
+                            onChange={(e) => setRejectComment(e.target.value)}
+                            placeholder="Tulis alasan penolakan (wajib)..."
+                            rows={3}
+                            className="w-full px-4 py-3 rounded-xl border border-red-200 dark:border-red-800/40 bg-red-50/30 dark:bg-red-900/10 text-sm text-gray-900 dark:text-white placeholder:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-500/30 resize-none"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleApproval("rejected", rejectComment)}
+                              disabled={approveLoading || !rejectComment.trim()}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm rounded-xl transition-all disabled:opacity-50"
+                            >
+                              {approveLoading ? (
+                                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                              ) : null}
+                              Kirim Penolakan
+                            </button>
+                            <button
+                              onClick={() => { setRejectMode(false); setRejectComment(""); }}
+                              className="px-4 py-2.5 text-gray-500 hover:text-gray-800 dark:hover:text-white font-medium text-sm rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </section>
                   )}
                 </div>

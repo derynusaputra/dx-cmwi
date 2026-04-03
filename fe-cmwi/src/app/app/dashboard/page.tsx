@@ -72,14 +72,9 @@ export default function OperatorDashboard() {
              <button
                 key={idx}
                 onClick={() => router.push(menu.path)}
-                className={`
-                  flex flex-col items-center justify-center p-8 rounded-[1.5rem] outline-none transition-all duration-200 aspect-[4/3] gap-3 border shadow-sm
-                  ${menu.active 
-                     ? 'bg-[#3b66f5] text-white border-transparent shadow-md hover:bg-[#2b51cc] active:scale-[0.98]' 
-                     : 'bg-white border-slate-100 text-slate-600 hover:bg-slate-50 hover:border-slate-200 active:bg-slate-100 active:scale-[0.98]'}
-                `}
+                className="group flex flex-col items-center justify-center p-8 rounded-[1.5rem] outline-none transition-all duration-200 aspect-[4/3] gap-3 border shadow-sm bg-white text-slate-700 border-slate-200 hover:border-blue-500 hover:text-blue-600 active:bg-[#3b66f5] active:text-white active:border-[#3b66f5] active:scale-[0.98]"
              >
-                <div className={`${menu.active ? 'text-white' : 'text-slate-600'}`}>
+                <div className="text-slate-500 group-hover:text-blue-500 group-active:text-white transition-colors duration-150">
                   {menu.icon}
                 </div>
                 <span className="text-[15px] font-extrabold tracking-wide">{menu.title}</span>
