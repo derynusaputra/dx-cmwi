@@ -751,9 +751,9 @@ export default function PaintingQCForm() {
                       <div className="flex flex-col gap-2">
                         {attachments.map((att, idx) => (
                           <div key={idx} className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
-                            <Paperclip className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            <Paperclip className="w-4 h-4 text-slate-400 shrink-0" />
                             <span className="text-xs font-medium text-slate-700 truncate flex-1">{att.filename}</span>
-                            <button type="button" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600 text-xs font-bold flex-shrink-0">Hapus</button>
+                            <button type="button" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600 text-xs font-bold shrink-0">Hapus</button>
                           </div>
                         ))}
                       </div>
