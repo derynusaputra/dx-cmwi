@@ -397,8 +397,8 @@ export default function TablePainting() {
       {/* Detail Drawer */}
       {detailOpen && (
         <>
-          <div className="fixed inset-0 z-[99998] bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => { setDetailOpen(false); setDetailData(null); }} />
-          <div className="fixed inset-y-0 right-0 z-[99999] w-full max-w-[640px] bg-white dark:bg-gray-900 shadow-2xl flex flex-col animate-[slideIn_0.3s_ease-out]">
+          <div className="fixed inset-0 z-99998 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => { setDetailOpen(false); setDetailData(null); }} />
+          <div className="fixed inset-y-0 right-0 z-99999 w-full max-w-[640px] bg-white dark:bg-gray-900 shadow-2xl flex flex-col animate-[slideIn_0.3s_ease-out]">
             {detailLoading ? (
               <div className="flex-1 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
@@ -495,8 +495,8 @@ export default function TablePainting() {
                       <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Thickness (um)</h3>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {Object.entries(detailData.thickness).map(([key, val]) => (
-                          <div key={key} className="rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 bg-gray-50/50 dark:bg-white/[0.02]">
-                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide capitalize">{key.replace(/_/g, " ")}</p>
+                          <div key={key} className="rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 bg-gray-50/50 dark:bg-white/2">
+                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{key.replace(/_/g, " ")}</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white mt-0.5 tabular-nums">{val || "-"}</p>
                           </div>
                         ))}
@@ -510,8 +510,8 @@ export default function TablePainting() {
                       <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Gloss</h3>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {Object.entries(detailData.gloss).map(([key, val]) => (
-                          <div key={key} className="rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 bg-gray-50/50 dark:bg-white/[0.02]">
-                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide capitalize">{key.replace(/_/g, " ")}</p>
+                          <div key={key} className="rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 bg-gray-50/50 dark:bg-white/2">
+                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{key.replace(/_/g, " ")}</p>
                             <p className="text-lg font-bold text-gray-900 dark:text-white mt-0.5 tabular-nums">{val || "-"}</p>
                           </div>
                         ))}
@@ -534,7 +534,7 @@ export default function TablePainting() {
                             className="relative group rounded-2xl overflow-hidden border-2 border-gray-100 dark:border-white/10 aspect-square hover:border-blue-400 transition-colors"
                           >
                             <img src={`${API_URL}${url}`} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-3">
+                            <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-3">
                               <span className="text-white text-xs font-semibold flex items-center gap-1">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
                                 Perbesar
@@ -592,7 +592,7 @@ export default function TablePainting() {
                   {detailData.comment && (
                     <section>
                       <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Komentar</h3>
-                      <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] px-5 py-4">
+                      <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/2 px-5 py-4">
                         <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{detailData.comment}</p>
                       </div>
                     </section>
@@ -614,7 +614,7 @@ export default function TablePainting() {
       {/* Lightbox */}
       {lightboxImg && (
         <div
-          className="fixed inset-0 z-[999999] bg-black/95 flex items-center justify-center p-6 cursor-zoom-out"
+          className="fixed inset-0 z-999999 bg-black/95 flex items-center justify-center p-6 cursor-zoom-out"
           onClick={() => setLightboxImg(null)}
         >
           <button
