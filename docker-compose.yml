@@ -1,30 +1,12 @@
 services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_DATABASE}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
-      context: ./be-test1
+      context: ./be-cmwi
       dockerfile: Dockerfile
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
       DB_DATABASE: ${DB_DATABASE}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -36,7 +18,7 @@ services:
 
   frontend:
     build:
-      context: ./fe-test1
+      context: ./fe-cmwi
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: "${APP_URL}"
@@ -58,5 +40,4 @@ services:
       - ./nginx/certs:/etc/nginx/certs:ro
 
 volumes:
-  pgdata:
   uploads:
