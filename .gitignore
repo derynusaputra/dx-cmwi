@@ -1,0 +1,33 @@
+# =====================
+# OS & Editor
+# =====================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+.idea/
+.vscode/
+
+# =====================
+# Frontend (fe-cmwi - Next.js)
+# =====================
+fe-cmwi/node_modules/
+fe-cmwi/.next/
+fe-cmwi/out/
+fe-cmwi/dist/
+fe-cmwi/.env
+fe-cmwi/.env.local
+fe-cmwi/.env.*.local
+
+# =====================
+# Backend (be-cmwi - Go)
+# =====================
+be-cmwi/bin/
+be-cmwi/tmp/
+be-cmwi/*.exe
+be-cmwi/*.exe~
+be-cmwi/*.dll
+be-cmwi/*.so
+be-cmwi/*.dylib
+be-cmwi/.env
+be-cmwi/.env.*
