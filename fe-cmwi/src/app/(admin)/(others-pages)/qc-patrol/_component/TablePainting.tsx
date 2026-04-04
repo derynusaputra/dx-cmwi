@@ -54,6 +54,7 @@ const API_URL = "";
 
 export default function TablePainting() {
   const [data, setData] = useState<PaintingInspection[]>([]);
+  const [statsData, setStatsData] = useState<PaintingInspection[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -137,9 +138,27 @@ export default function TablePainting() {
     }
   }, [currentPage, rowsPerPage, searchTerm, filterStatus, filterResult, filterWheelType]);
 
+  const fetchStats = useCallback(async () => {
+    try {
+      const params: Record<string, string | number> = {
+        limit: 10000,
+      };
+      if (searchTerm) params.search = searchTerm;
+      if (filterStatus !== "All") params.status = filterStatus;
+      if (filterResult !== "All") params.judgement = filterResult;
+      if (filterWheelType !== "All") params.wheel_type = filterWheelType;
+
+      const res = await apiClient.get<ApiResponse>("/painting-inspections", { params });
+      setStatsData(res.data.data || []);
+    } catch {
+      setStatsData([]);
+    }
+  }, [searchTerm, filterStatus, filterResult, filterWheelType]);
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchStats();
+  }, [fetchData, fetchStats]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -210,6 +229,17 @@ export default function TablePainting() {
       return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
     } catch {
       return dateStr;
+    }
+  };
+
+  const formatTimeOnly = (dateStr: string) => {
+    if (!dateStr) return "-";
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace('.', ':');
+    } catch {
+      return "";
     }
   };
 
@@ -293,8 +323,87 @@ export default function TablePainting() {
     return "bg-gray-50 text-gray-700 ring-gray-600/20";
   };
 
+  const getOverviewData = () => {
+    const totalCount = statsData.length;
+    const grouped: Record<string, { total: number; ok: number; ng: number }> = {};
+    
+    statsData.forEach(item => {
+      let typeName = "Other";
+      if (item.wheel_type.includes("-")) {
+        const parts = item.wheel_type.split("-");
+        if (parts.length > 1) {
+          typeName = parts[1];
+        }
+      } else {
+        typeName = item.wheel_type;
+      }
+
+      if (!grouped[typeName]) grouped[typeName] = { total: 0, ok: 0, ng: 0 };
+      grouped[typeName].total++;
+      if (item.judgement === "OK") grouped[typeName].ok++;
+      else grouped[typeName].ng++;
+    });
+
+    return { totalCount, grouped };
+  };
+
+  const { totalCount, grouped } = getOverviewData();
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Overview Cards */}
+      <div className="flex flex-col md:flex-row w-full gap-4">
+        {/* Total Card */}
+        <div className="flex-none bg-white dark:bg-[#121212] border border-gray-200 dark:border-white/10 rounded-2xl p-6 w-full md:w-64 flex flex-col justify-center">
+          <div className="flex justify-between items-start mb-6">
+            <h3 className="text-xs font-bold text-gray-500 tracking-wider">TOTAL CHECKED</h3>
+            <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            </div>
+          </div>
+          <div className="text-4xl font-black text-gray-900 dark:text-white mb-2">{totalCount}</div>
+          <div className="text-xs font-medium text-gray-400">Total seluruh data inspeksi</div>
+        </div>
+
+        {/* Breakdown by Wheel Family Type - Compact Scrollable List */}
+        <div className="flex-1 bg-white dark:bg-[#121212] border border-gray-200 dark:border-white/10 rounded-2xl p-6 flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-bold text-gray-500 tracking-wider">STATISTIK PER TIPE WHEEL</h3>
+            <span className="text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-2 py-1 rounded-full">{Object.keys(grouped).length} Tipe Ditemukan</span>
+          </div>
+          
+          {/* Scrollable Container */}
+          <div className="flex-1 overflow-y-auto pr-2 max-h-[120px] custom-scrollbar">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+              {Object.entries(grouped)
+                .sort((a, b) => b[1].total - a[1].total) // Sort by most tested
+                .map(([familyType, stats]) => {
+                  const okPercent = stats.total > 0 ? (stats.ok / stats.total) * 100 : 0;
+                  const ngPercent = stats.total > 0 ? (stats.ng / stats.total) * 100 : 0;
+                  return (
+                    <div key={familyType} className="flex flex-col gap-1.5 p-3 rounded-xl bg-gray-50/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 hover:border-gray-200 dark:hover:border-white/10 transition-colors">
+                      <div className="flex items-end justify-between">
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{familyType}</span>
+                        <span className="text-[11px] font-bold text-gray-500">{stats.total} PCS</span>
+                      </div>
+                      
+                      <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-gray-200 dark:bg-white/10 my-1">
+                        {stats.ok > 0 && <div className="bg-emerald-500 h-full transition-all" style={{ width: `${okPercent}%` }} />}
+                        {stats.ng > 0 && <div className="bg-red-500 h-full transition-all" style={{ width: `${ngPercent}%` }} />}
+                      </div>
+                      
+                      <div className="flex justify-between text-[9px] font-extrabold tracking-widest">
+                        <span className="text-emerald-600 dark:text-emerald-400">OK: {stats.ok}</span>
+                        <span className="text-red-500 dark:text-red-400">NG: {stats.ng}</span>
+                      </div>
+                    </div>
+                  );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Top Action Bar */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -393,6 +502,23 @@ export default function TablePainting() {
                     >
                       Semua Tipe
                     </button>
+                    <style>
+                      {`
+                        .custom-scrollbar::-webkit-scrollbar {
+                            width: 4px;
+                        }
+                        .custom-scrollbar::-webkit-scrollbar-track {
+                            background: transparent;
+                        }
+                        .custom-scrollbar::-webkit-scrollbar-thumb {
+                            background-color: #d1d5db;
+                            border-radius: 9999px;
+                        }
+                        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+                            background-color: #4b5563;
+                        }
+                      `}
+                    </style>
                     {filteredWheelTypes.length > 0 ? filteredWheelTypes.map(wt => (
                       <button
                         key={wt}
@@ -497,7 +623,7 @@ export default function TablePainting() {
                       className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                     />
                   </TableCell>
-                  {["DATE", "INSPECTOR", "LINE", "WHEEL TYPE", "RESULT", "STATUS", "APPROVAL", "ACTIONS"].map(h => (
+                  {["DATE & TIME", "INSPECTOR", "LINE", "WHEEL TYPE", "RESULT", "STATUS", "APPROVAL", "ACTIONS"].map(h => (
                     <TableCell
                       key={h}
                       isHeader
@@ -531,7 +657,10 @@ export default function TablePainting() {
                         />
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start font-medium text-gray-900 dark:text-white">
-                        {formatDate(row.date)}
+                        <div className="flex flex-col">
+                          <span className="font-bold">{formatDate(row.date)}</span>
+                          <span className="text-sm text-gray-500 font-normal mt-0.5">{formatTimeOnly(row.created_at)}</span>
+                        </div>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-gray-500 text-start text-sm dark:text-gray-400">
                         {row.inspector}
@@ -659,7 +788,7 @@ export default function TablePainting() {
                     <span className="text-xs text-gray-400 font-mono">ID #{detailData.id}</span>
                   </div>
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">{detailData.wheel_type}</h2>
-                  <p className="text-sm text-gray-500 mt-1">{formatDate(detailData.date)} &middot; Shift {detailData.shift} &middot; Group {detailData.group}</p>
+                  <p className="text-sm text-gray-500 mt-1">{formatDate(detailData.date)} {formatTimeOnly(detailData.created_at)} &middot; Shift {detailData.shift} &middot; Group {detailData.group}</p>
                   <div className="flex items-center gap-2 mt-4">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full ring-1 ring-inset ${detailData.judgement === "OK" ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20" : "bg-red-50 text-red-700 ring-red-600/20"}`}>
                       {detailData.judgement === "OK" ? (
