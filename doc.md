@@ -10,6 +10,10 @@ docker compose up -d --build
 //jalankan proxy
 https://localhost:8443/
 
+operator
+Username: operator
+Password: operator123
+
 Group Leader
 Username: gl_painting
 Password: gl123

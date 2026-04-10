@@ -51,71 +51,118 @@ const T_135: ThicknessSpec = { ...T_STD, disk: 135, spoke: 135, flange: 135 };
 const T_20: ThicknessSpec = { disk: 20, spoke: 20, flange: 20, spokeVerticalA: 20, spokeVerticalB: 20, beadOuter: 5, beadOuter2: 5, backRimInner: 10, backRimOuter: 10, backSpokeInner: 10, backSpokeOuter: 10 };
 const T_45: ThicknessSpec = { ...T_20, disk: 45, spoke: 45, flange: 45 };
 const T_135_35: ThicknessSpec = { ...T_135, spokeVerticalA: 35, spokeVerticalB: 35 };
+const T_STD_35: ThicknessSpec = { ...T_STD, spokeVerticalA: 35, spokeVerticalB: 35 };
 
 const PART_SPECS: Record<string, SpecData> = {
-  "18X7A1-CUA-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "18X7A1-CUA-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
   "18X7.5A1-CTM-PMS-GY45MF": { brightness: { disk: null, spoke: null, flange: null }, thickness: T_135, gloss: { machining: "Max. 17", casting: null } },
   "17X6A1-CDL-GY45CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
   "17X6A1-CDL-BK01CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
   "D17X6.5A1-DF-PMS-BK01F-ZJ": { brightness: { disk: null, spoke: null, flange: B_STD }, thickness: T_135_35, gloss: { machining: null, casting: null } },
-  "D17X6.5A1-DF-PMS-BK01CLF-ZJ": { brightness: { disk: null, spoke: null, flange: B_STD }, thickness: T_135_35, gloss: { machining: null, casting: null } },
+  "D17X6.5A1-DF-PMS-BK01CLF-ZJ": { brightness: { disk: null, spoke: null, flange: B_STD }, thickness: T_STD_35, gloss: { machining: null, casting: null } },
   "A17X6.5A1-TM-PMS-GY52F": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_45, gloss: { machining: null, casting: "Min. 85" } },
   "A18X7A1-TN1-PMS-BK01CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_20, gloss: { machining: "Min. 85", casting: "Min. 85" } },
   "16X6A1-BGX-PMS-BK01F": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
   "16X6A1-BGX-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
   "D18X7A1-DU-PMS-BK01CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
   "D17X6.5A1-DN-PMS-BK01CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
-  "A17X6.5A1-TH2-PMS-GY52CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_20, gloss: { machining: null, casting: "Min. 85" } },
+  "A17X6.5A1-TH2-PMS-GY52CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_20, gloss: { machining: "Min. 85", casting: "Min. 85" } },
   "18X7A1-BTY-PMS-GY45CLF-ZJ": { brightness: { disk: B_STD, spoke: B_STD, flange: null }, thickness: T_STD, gloss: { machining: null, casting: null } },
   "16X7A1-CME-PMS-SV14F": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
   "18X7A1-CHH-PMS-CR08F": { brightness: { disk: B_CR, spoke: null, flange: B_CR }, thickness: T_135, gloss: { machining: null, casting: null } },
-  "17X6.5A1-CHF-PMS-SV14F-ZJ": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
-  "16X6A1-CHC-PMS-SV14F-ZJ": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
-  "17X6.5A1-L19-PMS-BK01CLF-ZJ": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "17X6.5A1-CHF-PMS-SV14F-ZJ": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
+  "16X6A1-CHC-PMS-SV14F-ZJ": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
+  "17X6.5A1-L19-PMS-BK01CLF-ZJ": { brightness: { disk: null, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
   "16X6A1-CCN-PMS-GY45CLF-ZJ": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
-  "A17X6.5A1-SW1-PMS-BK01CLF-ZJ": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_20, gloss: { machining: null, casting: null } },
+  "A17X6.5A1-SW1-PMS-BK01CLF-ZJ": { brightness: { disk: null, spoke: null, flange: B_STD }, thickness: T_20, gloss: { machining: null, casting: null } },
   "A16X6.5A1-SV1-PMS-BK01CLF-ZJ": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_20, gloss: { machining: null, casting: null } },
   "18X7.5A1-BQQ-PMS-CR08F-ZJ": { brightness: { disk: B_CR, spoke: null, flange: B_CR }, thickness: T_135, gloss: { machining: null, casting: null } },
-  "15X5A1-DP-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: null }, thickness: T_STD, gloss: { machining: null, casting: null } },
-  "16X6A1-RST-PMS-GY02CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
-  "16X6A1-RST-PMS-BK01CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "15X5A1-DP-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD_35, gloss: { machining: null, casting: null } },
+  "16X6A1-RST-PMS-GY02CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "16X6A1-RST-PMS-BK01CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
   "17X7A1-APH-PMS-SV14F": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
   "17X7.5A1-AUQ-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
   "16X6A1-AWJ-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
-  "16X6A1-ATW-PMS-SV14F": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
-  "15X5.5A1-DJ-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "16X6A1-ATW-PMS-SV14F": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
+  "15X5.5A1-DJ-PMS-GY45CLF": { brightness: { disk: null, spoke: null, flange: B_STD }, thickness: T_STD_35, gloss: { machining: null, casting: null } },
   "15X5.5A1-AWG-PMS-GY02F": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
 };
 
-const SmallInputBox = ({ label, name, disabled = false, defaultValue = "", placeholder = "-" }: { label: string, name?: string, disabled?: boolean, defaultValue?: string, placeholder?: string }) => (
-  <div className="flex flex-col gap-1.5 items-center w-full min-w-0">
-    <label className="text-[10px] md:text-xs font-bold text-slate-700 capitalize tracking-wide">{label}</label>
-    <div className={`w-full h-10 md:h-12 border rounded-lg flex items-center justify-center overflow-hidden bg-white hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all ${disabled ? 'bg-slate-100 border-slate-200' : 'border-slate-300'}`}>
-      <input 
-        type="number"
-        name={name}
-        disabled={disabled}
-        defaultValue={defaultValue}
-        placeholder={placeholder==="-2 ~ +6" ? "-" : placeholder}
-        className="w-full h-full text-center text-sm md:text-base font-semibold text-slate-800 bg-transparent outline-none disabled:text-slate-400 placeholder:text-slate-300 text-xs"
-      />
-    </div>
-  </div>
-);
+function parseSpec(spec: string | null): { type: 'max' | 'min' | 'range'; limit?: number; min?: number; max?: number } | null {
+  if (!spec) return null;
+  if (spec === "-2 ~ +6") return { type: 'range', min: -2, max: 6 };
+  const maxMatch = spec.match(/^Max\.\s*([\d.]+)$/);
+  if (maxMatch) return { type: 'max', limit: parseFloat(maxMatch[1]) };
+  const minMatch = spec.match(/^Min\.\s*([\d.]+)$/);
+  if (minMatch) return { type: 'min', limit: parseFloat(minMatch[1]) };
+  return null;
+}
 
-const WideInputBox = ({ label, name, placeholder = "Nilai", disabled = false }: { label: string, name?: string, placeholder?: string, disabled?: boolean }) => (
-  <div className={`flex flex-col gap-1.5 w-full ${disabled ? 'hidden' : ''}`}>
-    <label className="text-xs md:text-sm font-bold text-slate-700">{label}</label>
-    <div className="w-full h-11 md:h-12 border border-slate-300 rounded-lg flex items-center px-3 bg-white hover:border-brand-400 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all">
-      <input 
-        type="text"
-        name={name}
-        placeholder={placeholder}
-        className="w-full h-full text-sm font-medium text-slate-800 bg-transparent outline-none placeholder:text-slate-400"
-      />
+function isOutOfSpec(value: number, spec: string | null): boolean {
+  if (isNaN(value) || !spec) return false;
+  const p = parseSpec(spec);
+  if (!p) return false;
+  if (p.type === 'max') return value > p.limit!;
+  if (p.type === 'min') return value < p.limit!;
+  if (p.type === 'range') return value < p.min! || value > p.max!;
+  return false;
+}
+
+const SmallInputBox = ({ label, name, disabled = false, defaultValue = "", placeholder = "-", spec = null }: { label: string; name?: string; disabled?: boolean; defaultValue?: string; placeholder?: string; spec?: string | null }) => {
+  const [val, setVal] = useState("");
+  const numVal = parseFloat(val);
+  const isError = !disabled && spec !== null && val !== "" && !isNaN(numVal) && isOutOfSpec(numVal, spec);
+  return (
+    <div className="flex flex-col gap-1.5 items-center w-full min-w-0">
+      <label className="text-[10px] md:text-xs font-bold text-slate-700 capitalize tracking-wide">{label}</label>
+      <div className={`w-full h-10 md:h-12 border rounded-lg flex items-center justify-center overflow-hidden transition-all ${
+        disabled
+          ? 'bg-slate-100 border-slate-200'
+          : isError
+            ? 'bg-red-50 border-red-500 ring-2 ring-red-500/20'
+            : 'bg-white border-slate-300 hover:border-blue-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20'
+      }`}>
+        {disabled ? (
+          <span className="text-center text-xs font-semibold text-slate-400">{defaultValue || placeholder}</span>
+        ) : (
+          <input
+            type="number"
+            name={name}
+            value={val}
+            onChange={(e) => setVal(e.target.value)}
+            placeholder={placeholder === "-2 ~ +6" ? "-" : placeholder}
+            className={`w-full h-full text-center text-xs font-semibold bg-transparent outline-none placeholder:text-slate-300 ${isError ? 'text-red-600' : 'text-slate-800'}`}
+          />
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+const WideInputBox = ({ label, name, placeholder = "Nilai", disabled = false, spec = null }: { label: string; name?: string; placeholder?: string; disabled?: boolean; spec?: string | null }) => {
+  const [val, setVal] = useState("");
+  const numVal = parseFloat(val);
+  const isError = spec !== null && val !== "" && !isNaN(numVal) && isOutOfSpec(numVal, spec);
+  return (
+    <div className={`flex flex-col gap-1.5 w-full ${disabled ? 'hidden' : ''}`}>
+      <label className="text-xs md:text-sm font-bold text-slate-700">{label}</label>
+      <div className={`w-full h-11 md:h-12 border rounded-lg flex items-center px-3 transition-all ${
+        isError
+          ? 'bg-red-50 border-red-500 ring-2 ring-red-500/20'
+          : 'bg-white border-slate-300 hover:border-brand-400 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20'
+      }`}>
+        <input
+          type="number"
+          name={name}
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder={spec ?? placeholder}
+          className={`w-full h-full text-sm font-medium bg-transparent outline-none placeholder:text-slate-400 ${isError ? 'text-red-600' : 'text-slate-800'}`}
+        />
+      </div>
+    </div>
+  );
+};
 
 const SectionContainer = ({ title, icon: Icon, children }: { title: string, icon: any, children: React.ReactNode }) => (
   <div className="w-full">
@@ -292,7 +339,6 @@ export default function PaintingQCForm() {
   const renderBrightnessBlock = (label: string, spec: BrightnessSpec | null) => {
     if (!spec) return null;
     const prefix = `brightness_${label.toLowerCase()}`;
-    console.log(prefix);
     return (
       <div className="flex flex-col gap-3 p-4 rounded-xl border border-slate-200/80 bg-slate-50/30">
         <span className="text-sm font-bold text-slate-800">{label}</span>
@@ -300,8 +346,8 @@ export default function PaintingQCForm() {
           <SmallInputBox label="L" name={`${prefix}_L`} disabled={!spec.L} />
           <SmallInputBox label="a" name={`${prefix}_a`} disabled={!spec.a} />
           <SmallInputBox label="b" name={`${prefix}_b`} disabled={!spec.b} />
-          <SmallInputBox label="△E" name={`${prefix}_dE`} disabled={!spec.dE} placeholder="Max. 3"/>
-          <SmallInputBox label="△L" name={`${prefix}_dL`} disabled={!spec.dL} defaultValue={!spec.dL ? "X" : ""} placeholder={!spec.dL ? "X" : "-2 ~ +6"} />
+          <SmallInputBox label="△E" name={`${prefix}_dE`} disabled={!spec.dE} placeholder={spec.dE ?? "Max. 3"} spec={spec.dE} />
+          <SmallInputBox label="△L" name={`${prefix}_dL`} disabled={!spec.dL} defaultValue={!spec.dL ? "X" : ""} placeholder={!spec.dL ? "X" : "-2 ~ +6"} spec={spec.dL} />
         </div>
       </div>
     );
@@ -614,7 +660,7 @@ export default function PaintingQCForm() {
 
             {/* Dynamic Form Check Areas */}
             {currentSpec ? (
-              <form ref={formRef} onSubmit={(e) => e.preventDefault()} className="w-full space-y-6 animate-fade-in-up">
+              <form key={selectedPart} ref={formRef} onSubmit={(e) => e.preventDefault()} className="w-full space-y-6 animate-fade-in-up">
                 
                 {/* 1. Brightness Check */}
                 {hasBrightness && (
@@ -628,22 +674,22 @@ export default function PaintingQCForm() {
                 {/* 2. Thickness Check */}
                 <SectionContainer title="Thickness (µm)" icon={Ruler}>
                   <div className="grid grid-cols-2 gap-4 md:gap-5 w-full">
-                    <WideInputBox label="Disk" name="t_disk" />
-                    <WideInputBox label="Spoke" name="t_spoke" />
-                    
-                    <WideInputBox label="Flange" name="t_flange" />
-                    <WideInputBox label="Spoke Vertical A" name="t_spokeVertA" />
-                    
-                    <WideInputBox label="Spoke Vertical B" name="t_spokeVertB" />
-                    <WideInputBox label="Bead Inner" name="t_beadInner" />
-                    
-                    <WideInputBox label="Bead Outer" name="t_beadOuter" />
-                    <WideInputBox label="Back Rim (Inner)" name="t_backRimInner" />
-                    
-                    <WideInputBox label="Back Rim (Outer)" name="t_backRimOuter" />
-                    <WideInputBox label="Back Spoke (Inner)" name="t_backSpokeIn" />
-                    
-                    <WideInputBox label="Back Spoke (Outer)" name="t_backSpokeOut" />
+                    <WideInputBox label="Disk" name="t_disk" spec={`Min. ${currentSpec.thickness.disk}`} />
+                    <WideInputBox label="Spoke" name="t_spoke" spec={`Min. ${currentSpec.thickness.spoke}`} />
+
+                    <WideInputBox label="Flange" name="t_flange" spec={`Min. ${currentSpec.thickness.flange}`} />
+                    <WideInputBox label="Spoke Vertical A" name="t_spokeVertA" spec={`Min. ${currentSpec.thickness.spokeVerticalA}`} />
+
+                    <WideInputBox label="Spoke Vertical B" name="t_spokeVertB" spec={`Min. ${currentSpec.thickness.spokeVerticalB}`} />
+                    <WideInputBox label="Bead Inner" name="t_beadInner" spec={`Min. ${currentSpec.thickness.beadOuter}`} />
+
+                    <WideInputBox label="Bead Outer" name="t_beadOuter" spec={`Min. ${currentSpec.thickness.beadOuter2}`} />
+                    <WideInputBox label="Back Rim (Inner)" name="t_backRimInner" spec={`Min. ${currentSpec.thickness.backRimInner}`} />
+
+                    <WideInputBox label="Back Rim (Outer)" name="t_backRimOuter" spec={`Min. ${currentSpec.thickness.backRimOuter}`} />
+                    <WideInputBox label="Back Spoke (Inner)" name="t_backSpokeIn" spec={`Min. ${currentSpec.thickness.backSpokeInner}`} />
+
+                    <WideInputBox label="Back Spoke (Outer)" name="t_backSpokeOut" spec={`Min. ${currentSpec.thickness.backSpokeOuter}`} />
                   </div>
                 </SectionContainer>
 
@@ -651,22 +697,22 @@ export default function PaintingQCForm() {
                 {hasGloss && (
                   <SectionContainer title="Gloss Check (GU)" icon={PaintBucket}>
                     {currentSpec.gloss.machining && (
-                      <div className="">
+                      <div className="flex flex-col gap-3 p-4 rounded-xl border border-slate-200/80 bg-slate-50/30">
                         <span className="text-sm font-bold text-slate-800">Machining Surface</span>
                         <div className="flex justify-between gap-1 sm:gap-2">
                           {[1, 2, 3, 4, 5].map(pos => (
-                            <SmallInputBox key={`m${pos}`} name={`gloss_machining_${pos}`} label={`Posisi ${pos}`} placeholder={currentSpec.gloss.machining!} />
+                            <SmallInputBox key={`m${pos}`} name={`gloss_machining_${pos}`} label={`Posisi - ${pos}`} placeholder={currentSpec.gloss.machining!} spec={currentSpec.gloss.machining} />
                           ))}
                         </div>
                       </div>
                     )}
-                    
+
                     {currentSpec.gloss.casting && (
                       <div className="flex flex-col gap-3 p-4 rounded-xl border border-slate-200/80 bg-slate-50/30">
                         <span className="text-sm font-bold text-slate-800">Casting Surface</span>
                         <div className="flex justify-between gap-1 sm:gap-2">
                           {[1, 2, 3, 4, 5].map(pos => (
-                            <SmallInputBox key={`c${pos}`} name={`gloss_casting_${pos}`} label={`Posisi ${pos}`} placeholder={currentSpec.gloss.casting!} />
+                            <SmallInputBox key={`c${pos}`} name={`gloss_casting_${pos}`} label={`Posisi - ${pos}`} placeholder={currentSpec.gloss.casting!} spec={currentSpec.gloss.casting} />
                           ))}
                         </div>
                       </div>
