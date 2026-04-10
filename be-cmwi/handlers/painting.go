@@ -121,6 +121,15 @@ func GetPaintingInspections(c *gin.Context) {
 	if wheelType := c.Query("wheel_type"); wheelType != "" {
 		query = query.Where("wheel_type = ?", wheelType)
 	}
+	if dateFrom := c.Query("date_from"); dateFrom != "" {
+		query = query.Where("date >= ?", dateFrom)
+	}
+	if dateTo := c.Query("date_to"); dateTo != "" {
+		query = query.Where("date <= ?", dateTo)
+	}
+	if inspector := c.Query("inspector"); inspector != "" {
+		query = query.Where("inspector = ?", inspector)
+	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))

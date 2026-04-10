@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.css";
 import { apiClient } from "@/lib/axios";
 import { useAuthStore } from "@/stores/authStore";
 import {
@@ -62,12 +64,73 @@ export default function TablePainting() {
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterResult, setFilterResult] = useState("All");
   const [filterWheelType, setFilterWheelType] = useState("All");
+  const [filterInspector, setFilterInspector] = useState("All");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [wheelTypeSearch, setWheelTypeSearch] = useState("");
   const [wheelTypeOpen, setWheelTypeOpen] = useState(false);
   const wheelTypeRef = useRef<HTMLDivElement>(null);
+  const datePickerRef = useRef<HTMLInputElement>(null);
+  const fpInstanceRef = useRef<flatpickr.Instance | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  const INSPECTORS = ['ARA R. M.', 'NURHADI', 'A. GINANJAR', 'RIAN M.', 'HAFIZ L. U.'];
+
+  const toYMD = (d: Date) => d.toISOString().split('T')[0];
+  const todayStr = () => toYMD(new Date());
+  const daysAgoStr = (n: number) => {
+    const d = new Date(); d.setDate(d.getDate() - n);
+    return toYMD(d);
+  };
+  const firstDayOfMonthStr = () => {
+    const d = new Date(); d.setDate(1);
+    return toYMD(d);
+  };
+
+  // Init flatpickr range picker
+  useEffect(() => {
+    if (!datePickerRef.current) return;
+    const fp = flatpickr(datePickerRef.current, {
+      mode: "range",
+      dateFormat: "Y-m-d",
+      static: false,
+      monthSelectorType: "static",
+      showMonths: 1,
+      disableMobile: true,
+      onChange: (selectedDates) => {
+        if (selectedDates.length >= 1) {
+          setDateFrom(toYMD(selectedDates[0]));
+        }
+        if (selectedDates.length === 2) {
+          setDateTo(toYMD(selectedDates[1]));
+        } else {
+          setDateTo("");
+        }
+      },
+    }) as flatpickr.Instance;
+    fpInstanceRef.current = fp;
+    return () => { fp.destroy(); fpInstanceRef.current = null; };
+  }, []);
+
+  const applyPreset = (preset: 'today' | '7d' | '30d' | 'month') => {
+    const today = todayStr();
+    let from = today;
+    const to = today;
+    if (preset === '7d') from = daysAgoStr(6);
+    else if (preset === '30d') from = daysAgoStr(29);
+    else if (preset === 'month') from = firstDayOfMonthStr();
+    setDateFrom(from);
+    setDateTo(to);
+    fpInstanceRef.current?.setDate([from, to], false);
+  };
+
+  const clearDateFilter = () => {
+    setDateFrom('');
+    setDateTo('');
+    fpInstanceRef.current?.clear();
+  };
 
   // Detail modal
   const [detailOpen, setDetailOpen] = useState(false);
@@ -126,6 +189,9 @@ export default function TablePainting() {
       if (filterStatus !== "All") params.status = filterStatus;
       if (filterResult !== "All") params.judgement = filterResult;
       if (filterWheelType !== "All") params.wheel_type = filterWheelType;
+      if (filterInspector !== "All") params.inspector = filterInspector;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
 
       const res = await apiClient.get<ApiResponse>("/painting-inspections", { params });
       setData(res.data.data || []);
@@ -136,7 +202,7 @@ export default function TablePainting() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, rowsPerPage, searchTerm, filterStatus, filterResult, filterWheelType]);
+  }, [currentPage, rowsPerPage, searchTerm, filterStatus, filterResult, filterWheelType, filterInspector, dateFrom, dateTo]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -147,13 +213,16 @@ export default function TablePainting() {
       if (filterStatus !== "All") params.status = filterStatus;
       if (filterResult !== "All") params.judgement = filterResult;
       if (filterWheelType !== "All") params.wheel_type = filterWheelType;
+      if (filterInspector !== "All") params.inspector = filterInspector;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
 
       const res = await apiClient.get<ApiResponse>("/painting-inspections", { params });
       setStatsData(res.data.data || []);
     } catch {
       setStatsData([]);
     }
-  }, [searchTerm, filterStatus, filterResult, filterWheelType]);
+  }, [searchTerm, filterStatus, filterResult, filterWheelType, filterInspector, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchData();
@@ -162,7 +231,7 @@ export default function TablePainting() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterStatus, filterResult, filterWheelType, rowsPerPage]);
+  }, [searchTerm, filterStatus, filterResult, filterWheelType, filterInspector, dateFrom, dateTo, rowsPerPage]);
 
   const openDetail = async (id: number) => {
     setDetailOpen(true);
@@ -406,28 +475,55 @@ export default function TablePainting() {
 
       {/* Top Action Bar */}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="relative w-full sm:w-80">
+        <style>{`
+          .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 9999px; }
+          .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #4b5563; }
+          input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }
+        `}</style>
+
+        {/* Row 1: Search + Action Filters */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="relative w-full sm:w-72">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24">
                 <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
               </svg>
             </div>
             <input
               type="text"
-              className="block w-full p-2.5 pl-10 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500 dark:bg-[#121212] dark:border-white/10 dark:placeholder-gray-500 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 outline-none transition-colors"
+              className="block w-full p-2.5 pl-9 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500 dark:bg-[#121212] dark:border-white/10 dark:placeholder-gray-500 dark:text-white outline-none transition-colors"
               placeholder="Search inspector or wheel type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Inspector Dropdown */}
+            <div className="relative border border-gray-200 dark:border-white/10 rounded-lg bg-white dark:bg-[#121212] overflow-hidden">
+              <select
+                value={filterInspector}
+                onChange={(e) => setFilterInspector(e.target.value)}
+                className={`appearance-none block w-full px-3 py-2.5 pr-8 text-sm bg-transparent focus:outline-none cursor-pointer ${
+                  filterInspector !== 'All' ? 'text-blue-700 dark:text-blue-300 font-semibold' : 'text-gray-900 dark:text-white'
+                }`}
+              >
+                <option value="All">Inspector</option>
+                {INSPECTORS.map(ins => <option key={ins} value={ins}>{ins}</option>)}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+            </div>
+
+            {/* Status Dropdown */}
             <div className="relative border border-gray-200 dark:border-white/10 rounded-lg bg-white dark:bg-[#121212] overflow-hidden">
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="appearance-none block w-full px-4 py-2.5 pr-10 text-sm text-gray-900 bg-transparent focus:outline-none dark:text-white cursor-pointer"
+                className="appearance-none block w-full px-3 py-2.5 pr-8 text-sm text-gray-900 bg-transparent focus:outline-none dark:text-white cursor-pointer"
               >
                 <option value="All">Status</option>
                 <option value="Pending GL">Pending GL</option>
@@ -438,23 +534,24 @@ export default function TablePainting() {
                 <option value="Rejected by SPV">Rejected by SPV</option>
                 <option value="Rejected by AMG">Rejected by AMG</option>
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
             </div>
 
+            {/* Result Dropdown */}
             <div className="relative border border-gray-200 dark:border-white/10 rounded-lg bg-white dark:bg-[#121212] overflow-hidden">
               <select
                 value={filterResult}
                 onChange={(e) => setFilterResult(e.target.value)}
-                className="appearance-none block w-full px-4 py-2.5 pr-10 text-sm text-gray-900 bg-transparent focus:outline-none dark:text-white cursor-pointer"
+                className="appearance-none block w-full px-3 py-2.5 pr-8 text-sm text-gray-900 bg-transparent focus:outline-none dark:text-white cursor-pointer"
               >
                 <option value="All">Result</option>
                 <option value="OK">OK</option>
                 <option value="NG">NG</option>
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
               </div>
             </div>
 
@@ -463,78 +560,36 @@ export default function TablePainting() {
               <button
                 type="button"
                 onClick={() => { setWheelTypeOpen(o => !o); setWheelTypeSearch(""); }}
-                className={`flex items-center gap-2 px-4 py-2.5 pr-10 text-sm rounded-lg border transition-colors w-[180px] text-left ${
+                className={`flex items-center gap-2 px-3 py-2.5 pr-8 text-sm rounded-lg border transition-colors w-[160px] text-left ${
                   filterWheelType !== "All"
                     ? "border-violet-400 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-600"
                     : "border-gray-200 bg-white text-gray-900 dark:bg-[#121212] dark:text-white dark:border-white/10"
                 }`}
               >
-                <span className="truncate flex-1">{filterWheelType === "All" ? "Wheel Type" : filterWheelType}</span>
-                <svg className={`w-4 h-4 shrink-0 transition-transform absolute right-2.5 ${ wheelTypeOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
+                <span className="truncate flex-1 text-sm">{filterWheelType === "All" ? "Wheel Type" : filterWheelType}</span>
+                <svg className={`w-4 h-4 shrink-0 transition-transform absolute right-2 ${wheelTypeOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
               </button>
-
               {wheelTypeOpen && (
                 <div className="absolute top-[calc(100%+6px)] right-0 z-50 w-72 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden">
-                  {/* Search input */}
                   <div className="p-2 border-b border-gray-100 dark:border-white/5">
                     <div className="relative">
                       <svg className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                      <input
-                        autoFocus
-                        type="text"
-                        placeholder="Cari wheel type..."
-                        value={wheelTypeSearch}
-                        onChange={(e) => setWheelTypeSearch(e.target.value)}
+                      <input autoFocus type="text" placeholder="Cari wheel type..." value={wheelTypeSearch} onChange={(e) => setWheelTypeSearch(e.target.value)}
                         className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400 text-gray-800 dark:text-white placeholder-gray-400 transition-all"
                       />
                     </div>
                   </div>
-                  {/* Options list */}
-                  <div className="max-h-52 overflow-y-auto">
-                    <button
-                      type="button"
-                      onClick={() => { setFilterWheelType("All"); setWheelTypeOpen(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                        filterWheelType === "All"
-                          ? "bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 font-semibold"
-                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
-                      }`}
-                    >
+                  <div className="max-h-52 overflow-y-auto custom-scrollbar">
+                    <button type="button" onClick={() => { setFilterWheelType("All"); setWheelTypeOpen(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${filterWheelType === "All" ? "bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 font-semibold" : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
                       Semua Tipe
                     </button>
-                    <style>
-                      {`
-                        .custom-scrollbar::-webkit-scrollbar {
-                            width: 4px;
-                        }
-                        .custom-scrollbar::-webkit-scrollbar-track {
-                            background: transparent;
-                        }
-                        .custom-scrollbar::-webkit-scrollbar-thumb {
-                            background-color: #d1d5db;
-                            border-radius: 9999px;
-                        }
-                        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-                            background-color: #4b5563;
-                        }
-                      `}
-                    </style>
                     {filteredWheelTypes.length > 0 ? filteredWheelTypes.map(wt => (
-                      <button
-                        key={wt}
-                        type="button"
-                        onClick={() => { setFilterWheelType(wt); setWheelTypeOpen(false); setWheelTypeSearch(""); }}
-                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-t border-gray-50 dark:border-white/5 ${
-                          filterWheelType === wt
-                            ? "bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 font-semibold"
-                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
-                        }`}
-                      >
+                      <button key={wt} type="button" onClick={() => { setFilterWheelType(wt); setWheelTypeOpen(false); setWheelTypeSearch(""); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-t border-gray-50 dark:border-white/5 ${filterWheelType === wt ? "bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 font-semibold" : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"}`}>
                         {wt}
                       </button>
-                    )) : (
-                      <div className="px-4 py-4 text-sm text-gray-400 text-center italic">Tidak ditemukan</div>
-                    )}
+                    )) : <div className="px-4 py-4 text-sm text-gray-400 text-center italic">Tidak ditemukan</div>}
                   </div>
                 </div>
               )}
@@ -542,20 +597,90 @@ export default function TablePainting() {
 
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 transition-colors whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 transition-colors whitespace-nowrap"
             >
-              Export Excel
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-              </svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Export
             </button>
           </div>
         </div>
 
+        {/* Row 2: Date Range Filter (flatpickr) */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-white dark:bg-[#121212] border border-gray-200 dark:border-white/10 rounded-xl">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tanggal</span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap flex-1">
+            {/* Flatpickr Range Input */}
+            <div className={`relative flex items-center gap-2 border rounded-lg px-3 py-2 min-w-[240px] transition-colors cursor-pointer ${
+              (dateFrom || dateTo)
+                ? 'border-sky-400 bg-sky-50 dark:bg-sky-900/20 dark:border-sky-600'
+                : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#1a1a1a] hover:border-gray-300 dark:hover:border-white/20'
+            }`}>
+              <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <input
+                ref={datePickerRef}
+                type="text"
+                readOnly
+                placeholder="Pilih rentang tanggal..."
+                className={`flex-1 text-sm font-medium bg-transparent outline-none cursor-pointer min-w-0 ${
+                  (dateFrom || dateTo) ? 'text-sky-700 dark:text-sky-300' : 'text-gray-400 dark:text-gray-500'
+                }`}
+              />
+              {(dateFrom || dateTo) && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); clearDateFilter(); }}
+                  className="shrink-0 text-sky-400 hover:text-sky-600 dark:hover:text-sky-200 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              )}
+            </div>
+
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400 font-medium hidden sm:block">Cepat:</span>
+              {([['today', 'Hari Ini'], ['7d', '7 Hari'], ['30d', '30 Hari'], ['month', 'Bulan Ini']] as const).map(([preset, label]) => (
+                <button
+                  key={preset}
+                  onClick={() => applyPreset(preset)}
+                  className="px-2.5 py-1.5 text-xs font-semibold rounded-md border transition-all border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-sky-400 hover:bg-sky-50 hover:text-sky-700 dark:hover:border-sky-600 dark:hover:bg-sky-900/20 dark:hover:text-sky-300"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Stats + Chips + Rows per page */}
         <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
           <div className="flex items-center gap-2 flex-wrap">
             <span>Total {total} records</span>
-            {/* Active Filter Chips */}
+
+            {/* Date chip */}
+            {(dateFrom || dateTo) && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 text-xs font-semibold ring-1 ring-sky-200 dark:ring-sky-700">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                {dateFrom && dateTo ? `${dateFrom} — ${dateTo}` : dateFrom ? `Dari ${dateFrom}` : `Sampai ${dateTo}`}
+                <button onClick={clearDateFilter} className="hover:text-sky-900 dark:hover:text-white transition-colors">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </span>
+            )}
+
+            {/* Inspector chip */}
+            {filterInspector !== 'All' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs font-semibold ring-1 ring-blue-200 dark:ring-blue-700">
+                Inspector: {filterInspector}
+                <button onClick={() => setFilterInspector('All')} className="hover:text-blue-900 dark:hover:text-white transition-colors">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </span>
+            )}
+
             {filterStatus !== "All" && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs font-semibold ring-1 ring-blue-200 dark:ring-blue-700">
                 Status: {filterStatus}
@@ -584,9 +709,9 @@ export default function TablePainting() {
                 </button>
               </span>
             )}
-            {(filterStatus !== "All" || filterResult !== "All" || filterWheelType !== "All") && (
+            {(filterStatus !== "All" || filterResult !== "All" || filterWheelType !== "All" || filterInspector !== "All" || dateFrom || dateTo) && (
               <button
-                onClick={() => { setFilterStatus("All"); setFilterResult("All"); setFilterWheelType("All"); }}
+                onClick={() => { setFilterStatus("All"); setFilterResult("All"); setFilterWheelType("All"); setFilterInspector("All"); clearDateFilter(); }}
                 className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline underline-offset-2 transition-colors"
               >
                 Reset semua
