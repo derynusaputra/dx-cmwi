@@ -44,7 +44,7 @@ type SpecData = {
 };
 
 const B_STD: BrightnessSpec = { L: true, a: true, b: true, dE: "Max. 3", dL: null };
-const B_CR: BrightnessSpec = { L: true, a: true, b: true, dE: null, dL: "-2 ~ +6" };
+const B_CR: BrightnessSpec = { L: true, a: true, b: true, dE: "", dL: "-2 ~ +6" };
 
 const T_STD: ThicknessSpec = { disk: 35, spoke: 35, flange: 35, spokeVerticalA: 50, spokeVerticalB: 50, beadOuter: 10, beadOuter2: 10, backRimInner: 20, backRimOuter: 20, backSpokeInner: 30, backSpokeOuter: 30 };
 const T_135: ThicknessSpec = { ...T_STD, disk: 135, spoke: 135, flange: 135 };
@@ -368,8 +368,8 @@ export default function PaintingQCForm() {
           <SmallInputBox label="L" name={`${prefix}_L`} disabled={!spec.L} onFieldChange={handleFieldChange} />
           <SmallInputBox label="a" name={`${prefix}_a`} disabled={!spec.a} onFieldChange={handleFieldChange} />
           <SmallInputBox label="b" name={`${prefix}_b`} disabled={!spec.b} onFieldChange={handleFieldChange} />
-          <SmallInputBox label="△E" name={`${prefix}_dE`} disabled={!spec.dE} placeholder={spec.dE ?? "Max. 3"} spec={spec.dE} onFieldChange={handleFieldChange} />
-          <SmallInputBox label="△L" name={`${prefix}_dL`} disabled={!spec.dL} defaultValue={!spec.dL ? "X" : ""} placeholder={!spec.dL ? "X" : "-2 ~ +6"} spec={spec.dL} onFieldChange={handleFieldChange} />
+          <SmallInputBox label="△E" name={`${prefix}_dE`} disabled={spec.dE === null} placeholder={spec.dE || "-"} spec={spec.dE} onFieldChange={handleFieldChange} />
+          <SmallInputBox label="△L" name={`${prefix}_dL`} disabled={spec.dL === null} defaultValue={spec.dL === null ? "X" : ""} placeholder={spec.dL === null ? "X" : "-2 ~ +6"} spec={spec.dL} onFieldChange={handleFieldChange} />
         </div>
       </div>
     );

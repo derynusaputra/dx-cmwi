@@ -857,19 +857,30 @@ export default function TablePainting() {
                   )}
 
                   {/* Thickness */}
-                  {detailData.thickness && Object.keys(detailData.thickness).length > 0 && (
-                    <section>
-                      <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Thickness (µm)</h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {Object.entries(detailData.thickness).map(([key, val]) => (
-                          <div key={key} className="rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 bg-gray-50/50 dark:bg-white/2">
-                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{key.replace(/_/g, " ")}</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white mt-0.5 tabular-nums">{val || "-"}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
+                  {detailData.thickness && Object.keys(detailData.thickness).length > 0 && (() => {
+                    const thicknessLabels: Record<string, string> = {
+                      disk: "Disk", spoke: "Spoke", flange: "Flange",
+                      spokeVertA: "Spoke Vertical A", spokeVertB: "Spoke Vertical B",
+                      beadInner: "Bead Inner", beadOuter: "Bead Outer",
+                      backRimInner: "Back Rim (Inner)", backRimOuter: "Back Rim (Outer)",
+                      backSpokeIn: "Back Spoke (Inner)", backSpokeOut: "Back Spoke (Outer)",
+                    };
+                    return (
+                      <section>
+                        <h3 className="text-[11px] font-bold text-gray-400 tracking-widest mb-3">THICKNESS (µm)</h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {Object.entries(detailData.thickness).map(([key, val]) => (
+                            <div key={key} className="rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 bg-gray-50/50 dark:bg-white/2">
+                              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
+                                {thicknessLabels[key] ?? key.replace(/_/g, " ")}
+                              </p>
+                              <p className="text-lg font-bold text-gray-900 dark:text-white mt-0.5 tabular-nums">{val || "-"}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })()}
 
                   {/* Gloss */}
                   {detailData.gloss && Object.keys(detailData.gloss).length > 0 && (
