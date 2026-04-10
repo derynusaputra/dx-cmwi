@@ -108,10 +108,15 @@ function isOutOfSpec(value: number, spec: string | null): boolean {
   return false;
 }
 
-const SmallInputBox = ({ label, name, disabled = false, defaultValue = "", placeholder = "-", spec = null }: { label: string; name?: string; disabled?: boolean; defaultValue?: string; placeholder?: string; spec?: string | null }) => {
+const SmallInputBox = ({ label, name, disabled = false, defaultValue = "", placeholder = "-", spec = null, onFieldChange }: { label: string; name?: string; disabled?: boolean; defaultValue?: string; placeholder?: string; spec?: string | null; onFieldChange?: (name: string, value: string, error: boolean) => void }) => {
   const [val, setVal] = useState("");
   const numVal = parseFloat(val);
   const isError = !disabled && spec !== null && val !== "" && !isNaN(numVal) && isOutOfSpec(numVal, spec);
+  const onFieldChangeRef = useRef(onFieldChange);
+  onFieldChangeRef.current = onFieldChange;
+  useEffect(() => {
+    if (!disabled && name) onFieldChangeRef.current?.(name, val, isError);
+  }, [val, isError, name, disabled]);
   return (
     <div className="flex flex-col gap-1.5 items-center w-full min-w-0">
       <label className="text-[10px] md:text-xs font-bold text-slate-700 capitalize tracking-wide">{label}</label>
@@ -139,10 +144,15 @@ const SmallInputBox = ({ label, name, disabled = false, defaultValue = "", place
   );
 };
 
-const WideInputBox = ({ label, name, placeholder = "Nilai", disabled = false, spec = null }: { label: string; name?: string; placeholder?: string; disabled?: boolean; spec?: string | null }) => {
+const WideInputBox = ({ label, name, placeholder = "Nilai", disabled = false, spec = null, onFieldChange }: { label: string; name?: string; placeholder?: string; disabled?: boolean; spec?: string | null; onFieldChange?: (name: string, value: string, error: boolean) => void }) => {
   const [val, setVal] = useState("");
   const numVal = parseFloat(val);
   const isError = spec !== null && val !== "" && !isNaN(numVal) && isOutOfSpec(numVal, spec);
+  const onFieldChangeRef = useRef(onFieldChange);
+  onFieldChangeRef.current = onFieldChange;
+  useEffect(() => {
+    if (!disabled && name) onFieldChangeRef.current?.(name, val, isError);
+  }, [val, isError, name, disabled]);
   return (
     <div className={`flex flex-col gap-1.5 w-full ${disabled ? 'hidden' : ''}`}>
       <label className="text-xs md:text-sm font-bold text-slate-700">{label}</label>
@@ -197,7 +207,10 @@ export default function PaintingQCForm() {
     paintingStatus: ['SARA', 'REPAIR 1X', 'REPAIR 2X', 'REPAIR 3X']
   };
 
-  const [judgement, setJudgement] = useState<"OK" | "NG" | null>(null);
+  const [formFields, setFormFields] = useState<Record<string, { filled: boolean; error: boolean }>>({});
+  const handleFieldChange = useCallback((fieldName: string, value: string, hasError: boolean) => {
+    setFormFields(prev => ({ ...prev, [fieldName]: { filled: value !== "", error: hasError } }));
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -336,6 +349,15 @@ export default function PaintingQCForm() {
   const hasBrightness = currentSpec && (currentSpec.brightness.disk || currentSpec.brightness.spoke || currentSpec.brightness.flange);
   const hasGloss = currentSpec && (currentSpec.gloss.machining || currentSpec.gloss.casting);
 
+  const hasAnyError = Object.values(formFields).some(f => f.error);
+  const allFieldsFilled = Object.keys(formFields).length > 0 && Object.values(formFields).every(f => f.filled);
+
+  const judgement: "OK" | "NG" | null = hasAnyError ? "NG" : allFieldsFilled ? "OK" : null;
+
+  useEffect(() => {
+    setFormFields({});
+  }, [selectedPart]);
+
   const renderBrightnessBlock = (label: string, spec: BrightnessSpec | null) => {
     if (!spec) return null;
     const prefix = `brightness_${label.toLowerCase()}`;
@@ -343,11 +365,11 @@ export default function PaintingQCForm() {
       <div className="flex flex-col gap-3 p-4 rounded-xl border border-slate-200/80 bg-slate-50/30">
         <span className="text-sm font-bold text-slate-800">{label}</span>
         <div className="flex justify-between gap-1 sm:gap-2">
-          <SmallInputBox label="L" name={`${prefix}_L`} disabled={!spec.L} />
-          <SmallInputBox label="a" name={`${prefix}_a`} disabled={!spec.a} />
-          <SmallInputBox label="b" name={`${prefix}_b`} disabled={!spec.b} />
-          <SmallInputBox label="△E" name={`${prefix}_dE`} disabled={!spec.dE} placeholder={spec.dE ?? "Max. 3"} spec={spec.dE} />
-          <SmallInputBox label="△L" name={`${prefix}_dL`} disabled={!spec.dL} defaultValue={!spec.dL ? "X" : ""} placeholder={!spec.dL ? "X" : "-2 ~ +6"} spec={spec.dL} />
+          <SmallInputBox label="L" name={`${prefix}_L`} disabled={!spec.L} onFieldChange={handleFieldChange} />
+          <SmallInputBox label="a" name={`${prefix}_a`} disabled={!spec.a} onFieldChange={handleFieldChange} />
+          <SmallInputBox label="b" name={`${prefix}_b`} disabled={!spec.b} onFieldChange={handleFieldChange} />
+          <SmallInputBox label="△E" name={`${prefix}_dE`} disabled={!spec.dE} placeholder={spec.dE ?? "Max. 3"} spec={spec.dE} onFieldChange={handleFieldChange} />
+          <SmallInputBox label="△L" name={`${prefix}_dL`} disabled={!spec.dL} defaultValue={!spec.dL ? "X" : ""} placeholder={!spec.dL ? "X" : "-2 ~ +6"} spec={spec.dL} onFieldChange={handleFieldChange} />
         </div>
       </div>
     );
@@ -372,12 +394,19 @@ export default function PaintingQCForm() {
     const val = (name: string) => (fd.get(name) as string) || "";
 
     const brightness: Record<string, Record<string, string>> = {};
+    const brightnessFieldMap = [
+      { formKey: "L",  payloadKey: "L"  },
+      { formKey: "a",  payloadKey: "a"  },
+      { formKey: "b",  payloadKey: "b"  },
+      { formKey: "dE", payloadKey: "\u25b3E" },
+      { formKey: "dL", payloadKey: "\u25b3L" },
+    ];
     for (const area of ["disk", "spoke", "flange"]) {
       const fields: Record<string, string> = {};
       let hasValue = false;
-      for (const key of ["L", "a", "b", "△E", "△L"]) {
-        const v = val(`brightness_${area}_${key}`);
-        if (v && v !== "X") { fields[key] = v; hasValue = true; }
+      for (const { formKey, payloadKey } of brightnessFieldMap) {
+        const v = val(`brightness_${area}_${formKey}`);
+        if (v && v !== "X") { fields[payloadKey] = v; hasValue = true; }
       }
       if (hasValue) brightness[area] = fields;
     }
@@ -674,22 +703,22 @@ export default function PaintingQCForm() {
                 {/* 2. Thickness Check */}
                 <SectionContainer title="Thickness (µm)" icon={Ruler}>
                   <div className="grid grid-cols-2 gap-4 md:gap-5 w-full">
-                    <WideInputBox label="Disk" name="t_disk" spec={`Min. ${currentSpec.thickness.disk}`} />
-                    <WideInputBox label="Spoke" name="t_spoke" spec={`Min. ${currentSpec.thickness.spoke}`} />
+                    <WideInputBox label="Disk" name="t_disk" spec={`Min. ${currentSpec.thickness.disk}`} onFieldChange={handleFieldChange} />
+                    <WideInputBox label="Spoke" name="t_spoke" spec={`Min. ${currentSpec.thickness.spoke}`} onFieldChange={handleFieldChange} />
 
-                    <WideInputBox label="Flange" name="t_flange" spec={`Min. ${currentSpec.thickness.flange}`} />
-                    <WideInputBox label="Spoke Vertical A" name="t_spokeVertA" spec={`Min. ${currentSpec.thickness.spokeVerticalA}`} />
+                    <WideInputBox label="Flange" name="t_flange" spec={`Min. ${currentSpec.thickness.flange}`} onFieldChange={handleFieldChange} />
+                    <WideInputBox label="Spoke Vertical A" name="t_spokeVertA" spec={`Min. ${currentSpec.thickness.spokeVerticalA}`} onFieldChange={handleFieldChange} />
 
-                    <WideInputBox label="Spoke Vertical B" name="t_spokeVertB" spec={`Min. ${currentSpec.thickness.spokeVerticalB}`} />
-                    <WideInputBox label="Bead Inner" name="t_beadInner" spec={`Min. ${currentSpec.thickness.beadOuter}`} />
+                    <WideInputBox label="Spoke Vertical B" name="t_spokeVertB" spec={`Min. ${currentSpec.thickness.spokeVerticalB}`} onFieldChange={handleFieldChange} />
+                    <WideInputBox label="Bead Inner" name="t_beadInner" spec={`Min. ${currentSpec.thickness.beadOuter}`} onFieldChange={handleFieldChange} />
 
-                    <WideInputBox label="Bead Outer" name="t_beadOuter" spec={`Min. ${currentSpec.thickness.beadOuter2}`} />
-                    <WideInputBox label="Back Rim (Inner)" name="t_backRimInner" spec={`Min. ${currentSpec.thickness.backRimInner}`} />
+                    <WideInputBox label="Bead Outer" name="t_beadOuter" spec={`Min. ${currentSpec.thickness.beadOuter2}`} onFieldChange={handleFieldChange} />
+                    <WideInputBox label="Back Rim (Inner)" name="t_backRimInner" spec={`Min. ${currentSpec.thickness.backRimInner}`} onFieldChange={handleFieldChange} />
 
-                    <WideInputBox label="Back Rim (Outer)" name="t_backRimOuter" spec={`Min. ${currentSpec.thickness.backRimOuter}`} />
-                    <WideInputBox label="Back Spoke (Inner)" name="t_backSpokeIn" spec={`Min. ${currentSpec.thickness.backSpokeInner}`} />
+                    <WideInputBox label="Back Rim (Outer)" name="t_backRimOuter" spec={`Min. ${currentSpec.thickness.backRimOuter}`} onFieldChange={handleFieldChange} />
+                    <WideInputBox label="Back Spoke (Inner)" name="t_backSpokeIn" spec={`Min. ${currentSpec.thickness.backSpokeInner}`} onFieldChange={handleFieldChange} />
 
-                    <WideInputBox label="Back Spoke (Outer)" name="t_backSpokeOut" spec={`Min. ${currentSpec.thickness.backSpokeOuter}`} />
+                    <WideInputBox label="Back Spoke (Outer)" name="t_backSpokeOut" spec={`Min. ${currentSpec.thickness.backSpokeOuter}`} onFieldChange={handleFieldChange} />
                   </div>
                 </SectionContainer>
 
@@ -701,7 +730,7 @@ export default function PaintingQCForm() {
                         <span className="text-sm font-bold text-slate-800">Machining Surface</span>
                         <div className="flex justify-between gap-1 sm:gap-2">
                           {[1, 2, 3, 4, 5].map(pos => (
-                            <SmallInputBox key={`m${pos}`} name={`gloss_machining_${pos}`} label={`Posisi - ${pos}`} placeholder={currentSpec.gloss.machining!} spec={currentSpec.gloss.machining} />
+                            <SmallInputBox key={`m${pos}`} name={`gloss_machining_${pos}`} label={`Posisi - ${pos}`} placeholder={currentSpec.gloss.machining!} spec={currentSpec.gloss.machining} onFieldChange={handleFieldChange} />
                           ))}
                         </div>
                       </div>
@@ -712,7 +741,7 @@ export default function PaintingQCForm() {
                         <span className="text-sm font-bold text-slate-800">Casting Surface</span>
                         <div className="flex justify-between gap-1 sm:gap-2">
                           {[1, 2, 3, 4, 5].map(pos => (
-                            <SmallInputBox key={`c${pos}`} name={`gloss_casting_${pos}`} label={`Posisi - ${pos}`} placeholder={currentSpec.gloss.casting!} spec={currentSpec.gloss.casting} />
+                            <SmallInputBox key={`c${pos}`} name={`gloss_casting_${pos}`} label={`Posisi - ${pos}`} placeholder={currentSpec.gloss.casting!} spec={currentSpec.gloss.casting} onFieldChange={handleFieldChange} />
                           ))}
                         </div>
                       </div>
@@ -779,78 +808,80 @@ export default function PaintingQCForm() {
                   </div>
                 </SectionContainer>
 
-                {/* 5. Komentar */}
-                <div className="w-full px-1">
-                  <div className="flex items-center gap-2 mb-3">
-                    <MessageSquare className="w-5 h-5 text-blue-600" />
-                    <h3 className="text-base md:text-lg font-bold text-slate-800">Komentar</h3>
-                  </div>
-                  <div className="w-full flex flex-col gap-3">
-                    <textarea 
-                      name="comment"
-                      placeholder="Tambahkan catatan jika diperlukan..."
-                      className="w-full h-24 p-4 border border-slate-300 rounded-xl outline-none text-sm text-slate-800 resize-none hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white"
-                    ></textarea>
-                    
-                    <input ref={attachInputRef} type="file" accept=".pdf,.xlsx,.xls,.docx,.doc,.csv,.jpg,.jpeg,.png" multiple className="hidden" onChange={handleAttachUpload} />
-                    
-                    {attachments.length > 0 && (
-                      <div className="flex flex-col gap-2">
-                        {attachments.map((att, idx) => (
-                          <div key={idx} className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
-                            <Paperclip className="w-4 h-4 text-slate-400 shrink-0" />
-                            <span className="text-xs font-medium text-slate-700 truncate flex-1">{att.filename}</span>
-                            <button type="button" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600 text-xs font-bold shrink-0">Hapus</button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <button
-                      type="button"
-                      disabled={uploading}
-                      onClick={() => attachInputRef.current?.click()}
-                      className="self-start h-10 px-4 border border-slate-300 rounded-full flex items-center justify-center gap-2 text-slate-700 bg-white hover:bg-slate-50 transition-colors disabled:opacity-50"
-                    >
-                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-                      <span className="text-xs font-semibold">{uploading ? "Mengunggah..." : "Lampirkan File/Gambar"}</span>
-                    </button>
-                  </div>
-                </div>
+               
 
-                {/* Overall Judgement */}
+                {/* Overall Judgement — Auto */}
                 <div className="w-full pt-4">
                   <h4 className="text-center text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Overall Judgement</h4>
-                  <div className="flex gap-4">
-                    <button 
-                      onClick={() => setJudgement("OK")}
-                      className={`flex-1 h-20 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all
-                      ${judgement === "OK" 
-                        ? 'border-green-500 bg-green-50 text-green-600' 
-                        : 'border-slate-200 bg-white text-slate-500 hover:border-green-300'}
-                    `}>
-                      <ThumbsUp className={`w-8 h-8 ${judgement === "OK" ? 'fill-green-200' : ''}`} />
-                      <span className="font-bold">OK</span>
-                    </button>
-                    <button 
-                      onClick={() => setJudgement("NG")}
-                      className={`flex-1 h-20 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all
-                      ${judgement === "NG" 
-                        ? 'border-red-500 bg-red-50 text-red-600' 
-                        : 'border-slate-200 bg-white text-slate-500 hover:border-red-300'}
-                    `}>
-                      <ThumbsDown className={`w-8 h-8 ${judgement === "NG" ? 'fill-red-200' : ''}`} />
-                      <span className="font-bold">NG</span>
-                    </button>
+                  <div className={`w-full h-20 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${
+                    judgement === "OK"
+                      ? 'border-green-500 bg-green-50 text-green-600'
+                      : judgement === "NG"
+                      ? 'border-red-500 bg-red-50 text-red-600'
+                      : 'border-slate-200 bg-slate-50 text-slate-400'
+                  }`}>
+                    {judgement === "OK" && <><ThumbsUp className="w-8 h-8 fill-green-200" /><span className="font-bold">OK</span></>}
+                    {judgement === "NG" && <><ThumbsDown className="w-8 h-8 fill-red-200" /><span className="font-bold">NG</span></>}
+                    {!judgement && <span className="text-sm font-medium">Isi semua field untuk melihat hasil</span>}
                   </div>
                 </div>
 
-                <div className="w-full pb-8 pt-4">
+
+                {judgement === "NG" && (
+                  <div className="w-full px-1 animate-fade-in-up">
+                    <div className="flex items-center gap-2 mb-3">
+                      <MessageSquare className="w-5 h-5 text-red-500" />
+                      <h3 className="text-base md:text-lg font-bold text-slate-800">Komentar <span className="text-red-500 text-sm font-semibold">(NG)</span></h3>
+                    </div>
+                    <div className="w-full flex flex-col gap-3">
+                      <textarea
+                        name="comment"
+                        placeholder="Jelaskan penyebab NG dan tindakan yang diambil..."
+                        className="w-full h-24 p-4 border border-red-200 rounded-xl outline-none text-sm text-slate-800 resize-none hover:border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all bg-red-50/30"
+                      ></textarea>
+
+                      <input ref={attachInputRef} type="file" accept=".pdf,.xlsx,.xls,.docx,.doc,.csv,.jpg,.jpeg,.png" multiple className="hidden" onChange={handleAttachUpload} />
+
+                      {attachments.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                          {attachments.map((att, idx) => (
+                            <div key={idx} className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
+                              <Paperclip className="w-4 h-4 text-slate-400 shrink-0" />
+                              <span className="text-xs font-medium text-slate-700 truncate flex-1">{att.filename}</span>
+                              <button type="button" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600 text-xs font-bold shrink-0">Hapus</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        disabled={uploading}
+                        onClick={() => attachInputRef.current?.click()}
+                        className="self-start h-10 px-4 border border-slate-300 rounded-full flex items-center justify-center gap-2 text-slate-700 bg-white hover:bg-slate-50 transition-colors disabled:opacity-50"
+                      >
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                        <span className="text-xs font-semibold">{uploading ? "Mengunggah..." : "Lampirkan File/Gambar"}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="w-full pb-8 pt-4 flex flex-col gap-3">
+                  {!allFieldsFilled && (
+                    <p className="text-xs text-center font-medium text-amber-600">
+                      Isi semua field pengukuran terlebih dahulu
+                    </p>
+                  )}
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={submitting}
-                    className="w-full h-14 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold rounded-xl active:scale-[0.98] transition-all text-base shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+                    disabled={submitting || !allFieldsFilled}
+                    className={`w-full h-14 font-bold rounded-xl transition-all text-base flex items-center justify-center gap-2 ${
+                      submitting || !allFieldsFilled
+                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white active:scale-[0.98] shadow-sm hover:shadow-md'
+                    }`}
                   >
                     {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                     {submitting ? "Menyimpan..." : "Submit Report"}
