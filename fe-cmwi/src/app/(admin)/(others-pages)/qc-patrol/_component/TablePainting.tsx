@@ -78,7 +78,12 @@ export default function TablePainting() {
 
   const INSPECTORS = ['ARA R. M.', 'NURHADI', 'A. GINANJAR', 'RIAN M.', 'HAFIZ L. U.'];
 
-  const toYMD = (d: Date) => d.toISOString().split('T')[0];
+  const toYMD = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
   const todayStr = () => toYMD(new Date());
   const daysAgoStr = (n: number) => {
     const d = new Date(); d.setDate(d.getDate() - n);
@@ -100,12 +105,18 @@ export default function TablePainting() {
       showMonths: 1,
       disableMobile: true,
       onChange: (selectedDates) => {
-        if (selectedDates.length >= 1) {
+        if (selectedDates.length === 1) {
+          // Saat klik 1 hari saja, asumsikan user ingin filter 1 hari itu
+          const date = toYMD(selectedDates[0]);
+          setDateFrom(date);
+          setDateTo(date);
+        } else if (selectedDates.length === 2) {
+          // Saat range lengkap
           setDateFrom(toYMD(selectedDates[0]));
-        }
-        if (selectedDates.length === 2) {
           setDateTo(toYMD(selectedDates[1]));
         } else {
+          // Reset ketika dikosongkan
+          setDateFrom("");
           setDateTo("");
         }
       },
@@ -664,7 +675,7 @@ export default function TablePainting() {
             {(dateFrom || dateTo) && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 text-xs font-semibold ring-1 ring-sky-200 dark:ring-sky-700">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                {dateFrom && dateTo ? `${dateFrom} — ${dateTo}` : dateFrom ? `Dari ${dateFrom}` : `Sampai ${dateTo}`}
+                {dateFrom && dateTo ? (dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`) : dateFrom ? `Dari ${dateFrom}` : `Sampai ${dateTo}`}
                 <button onClick={clearDateFilter} className="hover:text-sky-900 dark:hover:text-white transition-colors">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>

@@ -128,7 +128,7 @@ func GetPaintingInspections(c *gin.Context) {
 		query = query.Where("date <= ?", dateTo)
 	}
 	if inspector := c.Query("inspector"); inspector != "" {
-		query = query.Where("inspector = ?", inspector)
+		query = query.Where("inspector ILIKE ?", "%"+inspector+"%")
 	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
