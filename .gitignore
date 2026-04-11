@@ -8,6 +8,9 @@ Thumbs.db
 .idea/
 .vscode/
 
+.env
+.env.*
+
 # =====================
 # Frontend (fe-cmwi - Next.js)
 # =====================
