@@ -23,6 +23,7 @@ type PaintingInspection struct {
 	Comment        string         `gorm:"type:text" json:"comment"`
 	Judgement      string         `gorm:"size:5;not null" json:"judgement"`
 	Status         string         `gorm:"size:30;not null;default:'Pending GL'" json:"status"`
+	StartCheck     *time.Time     `gorm:"type:timestamptz" json:"start_check"`
 	Approvals      []Approval     `gorm:"foreignKey:InspectionID" json:"approvals,omitempty"`
 	SubmittedBy    uint           `gorm:"not null" json:"submitted_by"`
 	User           User           `gorm:"foreignKey:SubmittedBy" json:"user,omitempty"`
@@ -30,3 +31,4 @@ type PaintingInspection struct {
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
 }
+

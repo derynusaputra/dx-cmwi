@@ -1,5 +1,109 @@
 "use client";
 
+// ─── Spec Types & Data (mirrored from painting form for NG validation) ───────
+type BrightnessSpec = {
+  L: boolean;
+  a: boolean;
+  b: boolean;
+  dE: string | null;
+  dL: string | null;
+};
+
+type ThicknessSpec = {
+  disk: number;
+  spoke: number;
+  flange: number;
+  spokeVerticalA: number;
+  spokeVerticalB: number;
+  beadOuter: number;
+  beadOuter2: number;
+  backRimInner: number;
+  backRimOuter: number;
+  backSpokeInner: number;
+  backSpokeOuter: number;
+};
+
+type SpecData = {
+  brightness: {
+    disk: BrightnessSpec | null;
+    spoke: BrightnessSpec | null;
+    flange: BrightnessSpec | null;
+  };
+  thickness: ThicknessSpec;
+  gloss: {
+    machining: string | null;
+    casting: string | null;
+  };
+};
+
+const B_STD: BrightnessSpec = { L: true, a: true, b: true, dE: "Max. 3", dL: null };
+const B_CR: BrightnessSpec = { L: true, a: true, b: true, dE: "", dL: "-2 ~ +6" };
+
+const T_STD: ThicknessSpec = { disk: 35, spoke: 35, flange: 35, spokeVerticalA: 50, spokeVerticalB: 50, beadOuter: 10, beadOuter2: 10, backRimInner: 20, backRimOuter: 20, backSpokeInner: 30, backSpokeOuter: 30 };
+const T_135: ThicknessSpec = { ...T_STD, disk: 135, spoke: 135, flange: 135 };
+const T_20: ThicknessSpec = { disk: 20, spoke: 20, flange: 20, spokeVerticalA: 20, spokeVerticalB: 20, beadOuter: 5, beadOuter2: 5, backRimInner: 10, backRimOuter: 10, backSpokeInner: 10, backSpokeOuter: 10 };
+const T_45: ThicknessSpec = { ...T_20, disk: 45, spoke: 45, flange: 45 };
+const T_135_35: ThicknessSpec = { ...T_135, spokeVerticalA: 35, spokeVerticalB: 35 };
+const T_STD_35: ThicknessSpec = { ...T_STD, spokeVerticalA: 35, spokeVerticalB: 35 };
+
+const PART_SPECS: Record<string, SpecData> = {
+  "18X7A1-CUA-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "18X7.5A1-CTM-PMS-GY45MF": { brightness: { disk: null, spoke: null, flange: null }, thickness: T_135, gloss: { machining: "Max. 17", casting: null } },
+  "17X6A1-CDL-GY45CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "17X6A1-CDL-BK01CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "D17X6.5A1-DF-PMS-BK01F-ZJ": { brightness: { disk: null, spoke: null, flange: B_STD }, thickness: T_135_35, gloss: { machining: null, casting: null } },
+  "D17X6.5A1-DF-PMS-BK01CLF-ZJ": { brightness: { disk: null, spoke: null, flange: B_STD }, thickness: T_STD_35, gloss: { machining: null, casting: null } },
+  "A17X6.5A1-TM-PMS-GY52F": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_45, gloss: { machining: null, casting: "Min. 85" } },
+  "A18X7A1-TN1-PMS-BK01CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_20, gloss: { machining: "Min. 85", casting: "Min. 85" } },
+  "16X6A1-BGX-PMS-BK01F": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
+  "16X6A1-BGX-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "D18X7A1-DU-PMS-BK01CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "D17X6.5A1-DN-PMS-BK01CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "A17X6.5A1-TH2-PMS-GY52CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_20, gloss: { machining: "Min. 85", casting: "Min. 85" } },
+  "18X7A1-BTY-PMS-GY45CLF-ZJ": { brightness: { disk: B_STD, spoke: B_STD, flange: null }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "16X7A1-CME-PMS-SV14F": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
+  "18X7A1-CHH-PMS-CR08F": { brightness: { disk: B_CR, spoke: null, flange: B_CR }, thickness: T_135, gloss: { machining: null, casting: null } },
+  "17X6.5A1-CHF-PMS-SV14F-ZJ": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
+  "16X6A1-CHC-PMS-SV14F-ZJ": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
+  "17X6.5A1-L19-PMS-BK01CLF-ZJ": { brightness: { disk: null, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "16X6A1-CCN-PMS-GY45CLF-ZJ": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "A17X6.5A1-SW1-PMS-BK01CLF-ZJ": { brightness: { disk: null, spoke: null, flange: B_STD }, thickness: T_20, gloss: { machining: null, casting: null } },
+  "A16X6.5A1-SV1-PMS-BK01CLF-ZJ": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_20, gloss: { machining: null, casting: null } },
+  "18X7.5A1-BQQ-PMS-CR08F-ZJ": { brightness: { disk: B_CR, spoke: null, flange: B_CR }, thickness: T_135, gloss: { machining: null, casting: null } },
+  "15X5A1-DP-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_STD_35, gloss: { machining: null, casting: null } },
+  "16X6A1-RST-PMS-GY02CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "16X6A1-RST-PMS-BK01CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "17X7A1-APH-PMS-SV14F": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
+  "17X7.5A1-AUQ-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "16X6A1-AWJ-PMS-GY45CLF": { brightness: { disk: B_STD, spoke: null, flange: B_STD }, thickness: T_STD, gloss: { machining: null, casting: null } },
+  "16X6A1-ATW-PMS-SV14F": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
+  "15X5.5A1-DJ-PMS-GY45CLF": { brightness: { disk: null, spoke: null, flange: B_STD }, thickness: T_STD_35, gloss: { machining: null, casting: null } },
+  "15X5.5A1-AWG-PMS-GY02F": { brightness: { disk: B_STD, spoke: B_STD, flange: B_STD }, thickness: T_135, gloss: { machining: null, casting: null } },
+};
+
+function parseSpec(spec: string | null): { type: 'max' | 'min' | 'range'; limit?: number; min?: number; max?: number } | null {
+  if (!spec) return null;
+  if (spec === "-2 ~ +6") return { type: 'range', min: -2, max: 6 };
+  const maxMatch = spec.match(/^Max\.\s*([\d.]+)$/);
+  if (maxMatch) return { type: 'max', limit: parseFloat(maxMatch[1]) };
+  const minMatch = spec.match(/^Min\.\s*([\d.]+)$/);
+  if (minMatch) return { type: 'min', limit: parseFloat(minMatch[1]) };
+  return null;
+}
+
+function isOutOfSpec(value: number | string | undefined | null, spec: string | null): boolean {
+  if (value === undefined || value === null || value === '' || !spec) return false;
+  const numVal = typeof value === 'number' ? value : parseFloat(String(value));
+  if (isNaN(numVal)) return false;
+  const p = parseSpec(spec);
+  if (!p) return false;
+  if (p.type === 'max') return numVal > p.limit!;
+  if (p.type === 'min') return numVal < p.limit!;
+  if (p.type === 'range') return numVal < p.min! || numVal > p.max!;
+  return false;
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.css";
@@ -42,6 +146,7 @@ interface PaintingInspection {
   attachments: string[];
   comment: string;
   approvals: Approval[];
+  start_check: string | null;
   created_at: string;
 }
 
@@ -275,12 +380,98 @@ export default function TablePainting() {
   };
 
   const handleExportCSV = () => {
-    const headers = ["Date", "Inspector", "Line", "Wheel Type", "Result", "Status"];
+    const headers = [
+      "Date", "Time", "Shift", "Group", "Inspector", "Painting Status", "Line FI", "Wheel Type",
+      "Brightness Disk L", "Brightness Disk a", "Brightness Disk b", "Brightness Disk △E", "Brightness Disk △L",
+      "Brightness Spoke L", "Brightness Spoke a", "Brightness Spoke b", "Brightness Spoke △E", "Brightness Spoke △L",
+      "Brightness Flange L", "Brightness Flange a", "Brightness Flange b", "Brightness Flange △E", "Brightness Flange △L",
+      "Thickness Disk", "Thickness Spoke", "Thickness Flange", "Thickness Spoke Vert A", "Thickness Spoke Vert B",
+      "Thickness Bead Inner", "Thickness Bead Outer", "Thickness Back Rim Inner", "Thickness Back Rim Outer",
+      "Thickness Back Spoke Inner", "Thickness Back Spoke Outer",
+      "Gloss Machining 1", "Gloss Machining 2", "Gloss Machining 3", "Gloss Machining 4", "Gloss Machining 5",
+      "Gloss Casting 1", "Gloss Casting 2", "Gloss Casting 3", "Gloss Casting 4", "Gloss Casting 5",
+      "Result", "Status", "Komentar User",
+      "GL Action", "GL Komentar",
+      "SPV Action", "SPV Komentar",
+      "AMG Action", "AMG Komentar",
+      "Photos", "Attachments"
+    ];
+
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined || val === "") return "-";
+      const str = String(val);
+      if (str.includes(",") || str.includes("\"") || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+      }
+      return str;
+    };
+
+    const dataToExport = selectedRows.size > 0
+      ? statsData.filter(row => selectedRows.has(row.id))
+      : statsData;
+
+    const baseOrigin = typeof window !== 'undefined' ? window.location.origin : "";
+
     const csvContent = [
       headers.join(","),
-      ...data.map(row =>
-        [row.date, row.inspector, row.line, row.wheel_type, row.judgement, row.status].join(",")
-      )
+      ...dataToExport.map((row: any) => {
+        const time = row.created_at ? new Date(row.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace('.', ':') : "-";
+        
+        // Brightness
+        const b = row.brightness || {};
+        const bDisk = b.disk || {};
+        const bSpoke = b.spoke || {};
+        const bFlange = b.flange || {};
+
+        // Thickness
+        const t = row.thickness || {};
+
+        // Gloss
+        const g = row.gloss || {};
+        const gMach = g.machining || {};
+        const gCast = g.casting || {};
+
+        // Approvals
+        const gl = row.approvals?.find((a: any) => a.role === "GL");
+        const spv = row.approvals?.find((a: any) => a.role === "SPV");
+        const amg = row.approvals?.find((a: any) => a.role === "AMG");
+
+        // Media Links
+        const getLinks = (arr: string[]) => arr && arr.length > 0 ? arr.map(u => (u.startsWith("http") ? u : baseOrigin + u)).join(" ; ") : "-";
+
+        return [
+          escapeCSV(row.date),
+          escapeCSV(time),
+          escapeCSV(row.shift),
+          escapeCSV(row.group),
+          escapeCSV(row.inspector),
+          escapeCSV(row.painting_status),
+          escapeCSV(row.line),
+          escapeCSV(row.wheel_type),
+
+          escapeCSV(bDisk.L), escapeCSV(bDisk.a), escapeCSV(bDisk.b), escapeCSV(bDisk['△E']), escapeCSV(bDisk['△L']),
+          escapeCSV(bSpoke.L), escapeCSV(bSpoke.a), escapeCSV(bSpoke.b), escapeCSV(bSpoke['△E']), escapeCSV(bSpoke['△L']),
+          escapeCSV(bFlange.L), escapeCSV(bFlange.a), escapeCSV(bFlange.b), escapeCSV(bFlange['△E']), escapeCSV(bFlange['△L']),
+
+          escapeCSV(t.disk), escapeCSV(t.spoke), escapeCSV(t.flange), escapeCSV(t.spokeVertA), escapeCSV(t.spokeVertB),
+          escapeCSV(t.beadInner), escapeCSV(t.beadOuter), escapeCSV(t.backRimInner), escapeCSV(t.backRimOuter),
+          escapeCSV(t.backSpokeIn), escapeCSV(t.backSpokeOut),
+
+          escapeCSV(gMach.pos1), escapeCSV(gMach.pos2), escapeCSV(gMach.pos3), escapeCSV(gMach.pos4), escapeCSV(gMach.pos5),
+          escapeCSV(gCast.pos1), escapeCSV(gCast.pos2), escapeCSV(gCast.pos3), escapeCSV(gCast.pos4), escapeCSV(gCast.pos5),
+
+          escapeCSV(row.judgement),
+          escapeCSV(row.status),
+          escapeCSV(row.comment),
+
+          escapeCSV(gl ? gl.action : "Menunggu"), escapeCSV(gl?.comment || ""),
+          escapeCSV(spv ? spv.action : "Menunggu"), escapeCSV(spv?.comment || ""),
+          escapeCSV(amg ? amg.action : "Menunggu"), escapeCSV(amg?.comment || ""),
+
+          escapeCSV(getLinks(row.photos)),
+          escapeCSV(getLinks(row.attachments))
+        ].join(",");
+      })
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -759,6 +950,9 @@ export default function TablePainting() {
                       className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                     />
                   </TableCell>
+                  <TableCell isHeader className="px-4 py-4 font-semibold text-gray-500 text-xs tracking-wider uppercase dark:text-gray-400 text-center w-12">
+                    NO
+                  </TableCell>
                   {["DATE & TIME", "INSPECTOR", "LINE", "WHEEL TYPE", "RESULT", "STATUS", "APPROVAL", "ACTIONS"].map(h => (
                     <TableCell
                       key={h}
@@ -774,7 +968,7 @@ export default function TablePainting() {
               <TableBody className="divide-y divide-gray-100 dark:divide-white/5">
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="px-5 py-12 text-center text-gray-400">
+                    <TableCell colSpan={10} className="px-5 py-12 text-center text-gray-400">
                       <div className="flex items-center justify-center gap-2">
                         <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                         Loading...
@@ -782,7 +976,7 @@ export default function TablePainting() {
                     </TableCell>
                   </TableRow>
                 ) : data.length > 0 ? (
-                  data.map((row) => (
+                  data.map((row, index) => (
                     <TableRow key={row.id} className="hover:bg-gray-50 dark:hover:bg-white/2 transition-colors group">
                       <TableCell className="px-5 py-4 w-12">
                         <input
@@ -791,6 +985,11 @@ export default function TablePainting() {
                           onChange={() => toggleSelectRow(row.id)}
                           className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                         />
+                      </TableCell>
+                      <TableCell className="px-4 py-4 text-center">
+                        <span className="text-xs font-bold text-gray-400 dark:text-gray-500 tabular-nums">
+                          {(currentPage - 1) * rowsPerPage + index + 1}
+                        </span>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-start font-medium text-gray-900 dark:text-white">
                         <div className="flex flex-col">
@@ -859,7 +1058,7 @@ export default function TablePainting() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="px-5 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <TableCell colSpan={10} className="px-5 py-12 text-center text-gray-500 dark:text-gray-400">
                       Belum ada data inspection.
                     </TableCell>
                   </TableRow>
@@ -959,38 +1158,129 @@ export default function TablePainting() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Time Tracking */}
+                    {(() => {
+                      const start = detailData.start_check ? new Date(detailData.start_check) : null;
+                      const finish = detailData.created_at ? new Date(detailData.created_at) : null;
+                      const durationMs = start && finish ? finish.getTime() - start.getTime() : null;
+                      const formatDuration = (ms: number) => {
+                        const totalSec = Math.floor(ms / 1000);
+                        const hrs = Math.floor(totalSec / 3600);
+                        const mins = Math.floor((totalSec % 3600) / 60);
+                        const secs = totalSec % 60;
+                        if (hrs > 0) return `${hrs} jam ${mins} mnt ${secs} dtk`;
+                        if (mins > 0) return `${mins} mnt ${secs} dtk`;
+                        return `${secs} dtk`;
+                      };
+                      const fmtTime = (d: Date | null) => d
+                        ? d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).replace(/\./g, ':')
+                        : "-";
+                      return (
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5">
+                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Waktu Pengecekan</p>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/2 px-4 py-3">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Start Check</p>
+                              <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">{fmtTime(start)}</p>
+                            </div>
+                            <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/2 px-4 py-3">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Finish Check</p>
+                              <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">{fmtTime(finish)}</p>
+                            </div>
+                            <div className={`rounded-xl border px-4 py-3 ${
+                              durationMs !== null
+                                ? 'border-blue-200 dark:border-blue-800/50 bg-blue-50/50 dark:bg-blue-900/10'
+                                : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/2'
+                            }`}>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Durasi</p>
+                              <p className={`text-sm font-bold tabular-nums ${
+                                durationMs !== null ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
+                              }`}>
+                                {durationMs !== null ? formatDuration(durationMs) : "-"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </section>
 
                   {/* Brightness */}
-                  {detailData.brightness && Object.keys(detailData.brightness).length > 0 && (
-                    <section>
-                      <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Brightness</h3>
-                      <div className="rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-gray-50 dark:bg-white/5">
-                              <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide">Area</th>
-                              {["L", "a", "b", "△E", "△L"].map(h => (
-                                <th key={h} className="px-3 py-3 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wide">{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                            {Object.entries(detailData.brightness).map(([area, vals]) => (
-                              <tr key={area} className="hover:bg-gray-50/50 dark:hover:bg-white/2">
-                                <td className="px-4 py-3 font-semibold text-gray-800 dark:text-gray-200 capitalize">{area}</td>
-                                {["L", "a", "b", "△E", "△L"].map(k => (
-                                  <td key={k} className="px-3 py-3 text-center text-gray-600 dark:text-gray-400 tabular-nums">
-                                    {typeof vals === "object" && vals !== null ? (vals as Record<string, string | number>)[k] || <span className="text-gray-300">-</span> : <span className="text-gray-300">-</span>}
-                                  </td>
+                  {detailData.brightness && Object.keys(detailData.brightness).length > 0 && (() => {
+                    const partSpec = PART_SPECS[detailData.wheel_type];
+                    // Maps area name → brightness spec (disk, spoke, flange)
+                    const brightnessSpecMap: Record<string, BrightnessSpec | null> = {
+                      disk: partSpec?.brightness?.disk ?? null,
+                      spoke: partSpec?.brightness?.spoke ?? null,
+                      flange: partSpec?.brightness?.flange ?? null,
+                    };
+                    // Maps display header key → spec field key
+                    const keyToSpec: Record<string, keyof Pick<BrightnessSpec, 'dE' | 'dL'> | null> = {
+                      "L": null, "a": null, "b": null,
+                      "△E": "dE",
+                      "△L": "dL",
+                    };
+                    return (
+                      <section>
+                        <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Brightness</h3>
+                        <div className="rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-white/5">
+                                <th className="px-4 py-3 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide">Area</th>
+                                {["L", "a", "b", "△E", "△L"].map(h => (
+                                  <th key={h} className="px-3 py-3 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wide">{h}</th>
                                 ))}
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  )}
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                              {Object.entries(detailData.brightness).map(([area, vals]) => {
+                                const areaSpec = brightnessSpecMap[area] ?? null;
+                                return (
+                                  <tr key={area} className="hover:bg-gray-50/50 dark:hover:bg-white/2">
+                                    <td className="px-4 py-3 font-semibold text-gray-800 dark:text-gray-200 capitalize">{area}</td>
+                                    {["L", "a", "b", "△E", "△L"].map(k => {
+                                      const cellVal = typeof vals === "object" && vals !== null
+                                        ? (vals as Record<string, string | number>)[k]
+                                        : undefined;
+                                      const specFieldKey = keyToSpec[k];
+                                      const specStr = specFieldKey && areaSpec ? areaSpec[specFieldKey] : null;
+                                      const isNG = cellVal !== undefined && cellVal !== '' && specStr
+                                        ? isOutOfSpec(cellVal, specStr)
+                                        : false;
+                                      return (
+                                        <td
+                                          key={k}
+                                          className={`px-3 py-3 text-center tabular-nums transition-colors ${
+                                            isNG
+                                              ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold'
+                                              : 'text-gray-600 dark:text-gray-400'
+                                          }`}
+                                        >
+                                          {cellVal !== undefined && cellVal !== '' && cellVal !== null
+                                            ? (
+                                              <span className="flex items-center justify-center gap-1">
+                                                {isNG && (
+                                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                                                )}
+                                                {cellVal}
+                                              </span>
+                                            )
+                                            : <span className="text-gray-300">-</span>
+                                          }
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </section>
+                    );
+                  })()}
 
                   {/* Thickness */}
                   {detailData.thickness && Object.keys(detailData.thickness).length > 0 && (() => {
@@ -1001,37 +1291,139 @@ export default function TablePainting() {
                       backRimInner: "Back Rim (Inner)", backRimOuter: "Back Rim (Outer)",
                       backSpokeIn: "Back Spoke (Inner)", backSpokeOut: "Back Spoke (Outer)",
                     };
+                    const partSpec = PART_SPECS[detailData.wheel_type];
+                    // Maps API payload key → ThicknessSpec field
+                    const thicknessKeyToSpecField: Record<string, keyof ThicknessSpec | null> = {
+                      disk: "disk",
+                      spoke: "spoke",
+                      flange: "flange",
+                      spokeVertA: "spokeVerticalA",
+                      spokeVertB: "spokeVerticalB",
+                      beadInner: "beadOuter",     // beadInner uses beadOuter spec
+                      beadOuter: "beadOuter2",    // beadOuter uses beadOuter2 spec
+                      backRimInner: "backRimInner",
+                      backRimOuter: "backRimOuter",
+                      backSpokeIn: "backSpokeInner",
+                      backSpokeOut: "backSpokeOuter",
+                    };
                     return (
                       <section>
                         <h3 className="text-[11px] font-bold text-gray-400 tracking-widest mb-3">THICKNESS (µm)</h3>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {Object.entries(detailData.thickness).map(([key, val]) => (
-                            <div key={key} className="rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 bg-gray-50/50 dark:bg-white/2">
-                              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
-                                {thicknessLabels[key] ?? key.replace(/_/g, " ")}
-                              </p>
-                              <p className="text-lg font-bold text-gray-900 dark:text-white mt-0.5 tabular-nums">{val || "-"}</p>
-                            </div>
-                          ))}
+                          {Object.entries(detailData.thickness).map(([key, val]) => {
+                            const specField = thicknessKeyToSpecField[key];
+                            const minVal = specField && partSpec ? partSpec.thickness[specField] : null;
+                            const specStr = minVal !== null && minVal !== undefined ? `Min. ${minVal}` : null;
+                            const isNG = specStr ? isOutOfSpec(val, specStr) : false;
+                            return (
+                              <div
+                                key={key}
+                                className={`rounded-xl px-4 py-3 transition-colors ${
+                                  isNG
+                                    ? 'border-2 border-red-400 dark:border-red-600 bg-red-50 dark:bg-red-900/20'
+                                    : 'border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/2'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-1">
+                                  <p className={`text-[11px] font-semibold uppercase tracking-wide ${
+                                    isNG ? 'text-red-500 dark:text-red-400' : 'text-gray-400'
+                                  }`}>
+                                    {thicknessLabels[key] ?? key.replace(/_/g, " ")}
+                                  </p>
+                                  {isNG && (
+                                    <span className="shrink-0 text-[9px] font-black uppercase tracking-wider text-red-500 dark:text-red-400 bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 rounded-full">NG</span>
+                                  )}
+                                </div>
+                                <p className={`text-lg font-bold mt-0.5 tabular-nums ${
+                                  isNG ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
+                                }`}>
+                                  {val || "-"}
+                                </p>
+                                {isNG && minVal !== null && (
+                                  <p className="text-[9px] text-red-400 dark:text-red-500 mt-0.5">Min: {minVal} µm</p>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </section>
                     );
                   })()}
 
                   {/* Gloss */}
-                  {detailData.gloss && Object.keys(detailData.gloss).length > 0 && (
-                    <section>
-                      <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Gloss</h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {Object.entries(detailData.gloss).map(([key, val]) => (
-                          <div key={key} className="rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 bg-gray-50/50 dark:bg-white/2">
-                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{key.replace(/_/g, " ")}</p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white mt-0.5 tabular-nums">{val || "-"}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
+                  {detailData.gloss && Object.keys(detailData.gloss).length > 0 && (() => {
+                    const partSpec = PART_SPECS[detailData.wheel_type];
+                    // Gloss data: { machining: {pos1, pos2, ...}, casting: {pos1, ...} }
+                    // We display each surface group as a card, marking NG if any position is out-of-spec
+                    return (
+                      <section>
+                        <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Gloss</h3>
+                        <div className="flex flex-col gap-4">
+                          {Object.entries(detailData.gloss).map(([surface, positions]) => {
+                            const specStr = surface === 'machining'
+                              ? (partSpec?.gloss?.machining ?? null)
+                              : surface === 'casting'
+                              ? (partSpec?.gloss?.casting ?? null)
+                              : null;
+
+                            // positions can be an object { pos1, pos2, ... } or a raw value
+                            const posEntries = typeof positions === 'object' && positions !== null
+                              ? Object.entries(positions as Record<string, string | number>)
+                              : [];
+
+                            const hasAnyNG = posEntries.some(([, v]) => isOutOfSpec(v, specStr));
+
+                            return (
+                              <div key={surface}>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                                    {surface.replace(/_/g, " ")} Surface
+                                  </p>
+                                  {specStr && (
+                                    <span className="text-[10px] text-gray-400 font-medium">({specStr})</span>
+                                  )}
+                                  {hasAnyNG && (
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-red-500 dark:text-red-400 bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 rounded-full">NG</span>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                                  {posEntries.length > 0 ? posEntries.map(([posKey, posVal]) => {
+                                    const isNG = isOutOfSpec(posVal, specStr);
+                                    return (
+                                      <div
+                                        key={posKey}
+                                        className={`rounded-xl px-3 py-3 flex flex-col items-center gap-1 transition-colors ${
+                                          isNG
+                                            ? 'border-2 border-red-400 dark:border-red-600 bg-red-50 dark:bg-red-900/20'
+                                            : 'border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/2'
+                                        }`}
+                                      >
+                                        <p className={`text-[10px] font-semibold uppercase tracking-wide ${
+                                          isNG ? 'text-red-400 dark:text-red-500' : 'text-gray-400'
+                                        }`}>
+                                          {posKey.replace('pos', 'Pos ')}
+                                        </p>
+                                        <p className={`text-base font-bold tabular-nums ${
+                                          isNG ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
+                                        }`}>
+                                          {posVal || "-"}
+                                        </p>
+                                        {isNG && (
+                                          <span className="text-[8px] font-black text-red-500">▲ NG</span>
+                                        )}
+                                      </div>
+                                    );
+                                  }) : (
+                                    <div className="col-span-full text-sm text-gray-400">-</div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    );
+                  })()}
 
                   {/* Photos */}
                   {detailData.photos && detailData.photos.length > 0 && (

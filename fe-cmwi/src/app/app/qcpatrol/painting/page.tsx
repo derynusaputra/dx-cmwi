@@ -212,6 +212,8 @@ export default function PaintingQCForm() {
     setFormFields(prev => ({ ...prev, [fieldName]: { filled: value !== "", error: hasError } }));
   }, []);
   const [submitting, setSubmitting] = useState(false);
+  const [startCheckTime, setStartCheckTime] = useState<string>("");
+  const [commentText, setCommentText] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const attachInputRef = useRef<HTMLInputElement>(null);
@@ -380,6 +382,7 @@ export default function PaintingQCForm() {
       alert("Harap lengkapi semua data awal terlebih dahulu!");
       return;
     }
+    setStartCheckTime(new Date().toISOString()); // ← catat waktu mulai pengecekan
     setStep(2);
   };
 
@@ -448,8 +451,9 @@ export default function PaintingQCForm() {
       gloss,
       photos: fiPhotos.map(p => p.url),
       attachments: attachments.map(a => a.url),
-      comment: val("comment"),
+      comment: commentText,
       judgement,
+      start_check: startCheckTime || undefined,
     };
 
     setSubmitting(true);
@@ -836,6 +840,8 @@ export default function PaintingQCForm() {
                     <div className="w-full flex flex-col gap-3">
                       <textarea
                         name="comment"
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
                         placeholder="Jelaskan penyebab NG dan tindakan yang diambil..."
                         className="w-full h-24 p-4 border border-red-200 rounded-xl outline-none text-sm text-slate-800 resize-none hover:border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all bg-red-50/30"
                       ></textarea>

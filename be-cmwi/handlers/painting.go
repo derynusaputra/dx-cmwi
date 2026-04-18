@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,6 +26,7 @@ type CreatePaintingRequest struct {
 	Attachments    []string               `json:"attachments"`
 	Comment        string                 `json:"comment"`
 	Judgement      string                 `json:"judgement" binding:"required,oneof=OK NG"`
+	StartCheck     string                 `json:"start_check"`
 }
 
 type ApproveRequest struct {
@@ -71,6 +73,15 @@ func CreatePaintingInspection(c *gin.Context) {
 
 	userID, _ := c.Get("user_id")
 
+	// Parse start_check timestamp (optional, sent as ISO 8601 from frontend)
+	var startCheckPtr *time.Time
+	if req.StartCheck != "" {
+		parsed, err := time.Parse(time.RFC3339, req.StartCheck)
+		if err == nil {
+			startCheckPtr = &parsed
+		}
+	}
+
 	inspection := models.PaintingInspection{
 		Date:           req.Date,
 		Shift:          req.Shift,
@@ -87,6 +98,7 @@ func CreatePaintingInspection(c *gin.Context) {
 		Comment:        req.Comment,
 		Judgement:       req.Judgement,
 		Status:         "Pending GL",
+		StartCheck:     startCheckPtr,
 		SubmittedBy:    userID.(uint),
 	}
 
