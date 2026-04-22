@@ -25,6 +25,7 @@ func main() {
 		&models.RefreshToken{},
 		&models.PaintingInspection{},
 		&models.Approval{},
+		&models.QCR{},
 	)
 
 	config.SeedDefaultUsers()

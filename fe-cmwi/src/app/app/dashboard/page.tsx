@@ -38,7 +38,7 @@ export default function OperatorDashboard() {
     { title: 'Dokumen', icon: <FileText size={42} strokeWidth={1.5} />, path: '/dokumen', active: false },
     { title: 'Wheel Type', icon: <Disc size={42} strokeWidth={1.5} />, path: '/wheel-type', active: false },
     { title: 'QC Patrol', icon: <ClipboardList size={42} strokeWidth={1.5} />, path: '/app/qcpatrol', active: true },
-    { title: 'QCR', icon: <FileBox size={42} strokeWidth={1.5} />, path: '/qcr', active: false },
+    { title: 'QCR', icon: <FileBox size={42} strokeWidth={1.5} />, path: '/app/qcr', active: false },
     { title: 'Kalibrasi', icon: <CalendarCheck size={42} strokeWidth={1.5} />, path: '/kalibrasi', active: false },
     { title: 'Change List', icon: <ListChecks size={42} strokeWidth={1.5} />, path: '/change-list', active: false },
   ];

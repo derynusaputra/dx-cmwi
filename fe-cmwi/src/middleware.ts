@@ -18,6 +18,7 @@ export function middleware(req: NextRequest) {
     pathname.startsWith('/auth/') ||
     pathname.startsWith('/user/') ||
     pathname.startsWith('/painting-inspections') ||
+    pathname.startsWith('/api/') ||
     pathname.startsWith('/uploads') ||
     pathname.startsWith('/files');
 

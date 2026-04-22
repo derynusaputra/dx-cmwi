@@ -37,4 +37,13 @@ func SetupRoutes(r *gin.Engine) {
 		painting.PUT("/:id/approve", handlers.ApprovePaintingInspection)
 		painting.DELETE("/:id", handlers.DeletePaintingInspection)
 	}
+
+	qcr := r.Group("/qcr")
+	qcr.Use(middleware.AuthRequired())
+	{
+		qcr.POST("", handlers.CreateQCR)
+		qcr.GET("", handlers.GetQCRs)
+		qcr.GET("/:id", handlers.GetQCR)
+		qcr.DELETE("/:id", handlers.DeleteQCR)
+	}
 }
