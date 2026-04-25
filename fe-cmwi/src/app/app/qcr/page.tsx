@@ -121,7 +121,7 @@ export default function QCRListPage() {
         )}
 
         {/* Empty state */}
-        {!loading && data.length === 0 && (
+        {/* {!loading && data.length === 0 && (
           <div className="fade-up flex flex-col items-center justify-center py-20 gap-4">
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center">
               <ClipboardList className="w-10 h-10 text-slate-300" />
@@ -131,7 +131,7 @@ export default function QCRListPage() {
               <p className="text-sm text-slate-400 mt-1">Buat request baru untuk memulai</p>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* QCR Cards */}
         {!loading && data.map((item, idx) => (

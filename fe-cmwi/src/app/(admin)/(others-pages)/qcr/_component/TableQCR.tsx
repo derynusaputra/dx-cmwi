@@ -122,6 +122,7 @@ const EvalSection = ({
 
 export default function TableQCR() {
   const [data, setData] = useState<QCRRecord[]>([]);
+  const [statsData, setStatsData] = useState<QCRRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -129,68 +130,111 @@ export default function TableQCR() {
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterUrgency, setFilterUrgency] = useState("All");
   const [filterDept, setFilterDept] = useState("All");
-  const [dateRange, setDateRange] = useState<[string, string]>(["", ""]);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailData, setDetailData] = useState<QCRRecord | null>(null);
 
-  const dateRef = useRef<HTMLInputElement>(null);
+  const datePickerRef = useRef<HTMLInputElement>(null);
   const fpRef = useRef<flatpickr.Instance | null>(null);
 
-  // ── flatpickr date range ──
+  // ── Date helpers ──
+  const toYMD = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  const todayStr = () => toYMD(new Date());
+  const daysAgoStr = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return toYMD(d); };
+  const firstDayOfMonthStr = () => { const d = new Date(); d.setDate(1); return toYMD(d); };
+
+  const applyPreset = (preset: "today" | "7d" | "30d" | "month") => {
+    const today = todayStr();
+    let from = today;
+    if (preset === "7d") from = daysAgoStr(6);
+    else if (preset === "30d") from = daysAgoStr(29);
+    else if (preset === "month") from = firstDayOfMonthStr();
+    setDateFrom(from); setDateTo(today);
+    fpRef.current?.setDate([from, today], false);
+  };
+
+  const clearDateFilter = () => { setDateFrom(""); setDateTo(""); fpRef.current?.clear(); };
+
+  // ── flatpickr ──
   useEffect(() => {
-    if (!dateRef.current) return;
-    fpRef.current = flatpickr(dateRef.current, {
+    if (!datePickerRef.current) return;
+    const fp = flatpickr(datePickerRef.current, {
       mode: "range",
       dateFormat: "Y-m-d",
+      disableMobile: true,
       onChange: (dates) => {
-        if (dates.length === 2) {
-          setDateRange([
-            dates[0].toISOString().split("T")[0],
-            dates[1].toISOString().split("T")[0],
-          ]);
-          setCurrentPage(1);
-        } else if (dates.length === 0) {
-          setDateRange(["", ""]);
-        }
+        if (dates.length === 1) { const d = toYMD(dates[0]); setDateFrom(d); setDateTo(d); }
+        else if (dates.length === 2) { setDateFrom(toYMD(dates[0])); setDateTo(toYMD(dates[1])); }
+        else { setDateFrom(""); setDateTo(""); }
       },
-    });
-    return () => fpRef.current?.destroy();
+    }) as flatpickr.Instance;
+    fpRef.current = fp;
+    return () => { fp.destroy(); fpRef.current = null; };
   }, []);
 
   // ── Fetch ──
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = {
-        page: String(currentPage),
-        limit: String(rowsPerPage),
-      };
+      const params: Record<string, string> = { page: String(currentPage), limit: String(rowsPerPage) };
       if (filterStatus !== "All") params.status = filterStatus;
       if (filterUrgency !== "All") params.urgency_level = filterUrgency;
       if (filterDept !== "All") params.dept_section = filterDept;
       if (searchTerm.trim()) params.search = searchTerm.trim();
-      if (dateRange[0]) params.date_from = dateRange[0];
-      if (dateRange[1]) params.date_to = dateRange[1];
-
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
       const qs = new URLSearchParams(params).toString();
       const res = await apiClient.get<ApiResponse>(`/api/qcr?${qs}`);
       setData(res.data.data ?? []);
       setTotal(res.data.total ?? 0);
-    } catch {
-      setData([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, filterStatus, filterUrgency, filterDept, searchTerm, dateRange]);
+    } catch { setData([]); setTotal(0); }
+    finally { setLoading(false); }
+  }, [currentPage, rowsPerPage, filterStatus, filterUrgency, filterDept, searchTerm, dateFrom, dateTo]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const fetchStats = useCallback(async () => {
+    try {
+      const params: Record<string, string> = { limit: "10000" };
+      if (filterStatus !== "All") params.status = filterStatus;
+      if (filterUrgency !== "All") params.urgency_level = filterUrgency;
+      if (filterDept !== "All") params.dept_section = filterDept;
+      if (searchTerm.trim()) params.search = searchTerm.trim();
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+      const qs = new URLSearchParams(params).toString();
+      const res = await apiClient.get<ApiResponse>(`/api/qcr?${qs}`);
+      setStatsData(res.data.data ?? []);
+    } catch { setStatsData([]); }
+  }, [filterStatus, filterUrgency, filterDept, searchTerm, dateFrom, dateTo]);
+
+  useEffect(() => { fetchData(); fetchStats(); }, [fetchData, fetchStats]);
+
+  useEffect(() => { setCurrentPage(1); }, [filterStatus, filterUrgency, filterDept, searchTerm, dateFrom, dateTo, rowsPerPage]);
+
+  // ── Overview stats ──
+  const getOverviewData = () => {
+    const totalCount = statsData.length;
+    const grouped: Record<string, { total: number; pending: number; received: number; rejected: number }> = {};
+    statsData.forEach(item => {
+      const key = item.dept_section || "Other";
+      if (!grouped[key]) grouped[key] = { total: 0, pending: 0, received: 0, rejected: 0 };
+      grouped[key].total++;
+      if (item.status === "Pending") grouped[key].pending++;
+      else if (item.status === "Received") grouped[key].received++;
+      else if (item.status === "Rejected") grouped[key].rejected++;
+    });
+    return { totalCount, grouped };
+  };
+  const { totalCount, grouped } = getOverviewData();
 
   // ── Pagination ──
   const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
@@ -212,69 +256,199 @@ export default function TableQCR() {
     a.download = `QCR_${new Date().toISOString().slice(0,10)}.csv`; a.click();
   };
 
-  const clearDate = () => { fpRef.current?.clear(); setDateRange(["", ""]); };
-
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `
+      <style>{`
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-      `}} />
+        .qcr-scrollbar::-webkit-scrollbar { width: 4px; }
+        .qcr-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .qcr-scrollbar::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 9999px; }
+      `}</style>
 
-      <div className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+      <div className="flex flex-col gap-6">
 
-        {/* ── Toolbar ───────────────────────────────────────────────────── */}
-        <div className="px-5 pt-5 pb-4 border-b border-gray-100 dark:border-white/5 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Quality Control Request</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{total} total records</p>
+        {/* ── Overview Cards ─────────────────────────────────────── */}
+        <div className="flex flex-col md:flex-row w-full gap-4">
+          {/* Card: Total Request */}
+          <div className="flex-none bg-white dark:bg-[#121212] border border-gray-200 dark:border-white/10 rounded-2xl p-6 w-full md:w-64 flex flex-col justify-center">
+            <div className="flex justify-between items-start mb-6">
+              <h3 className="text-xs font-bold text-gray-500 tracking-wider">TOTAL REQUEST</h3>
+              <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              </div>
             </div>
-            <button
-              onClick={exportCSV}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm"
-            >
-              Export CSV
-            </button>
+            <div className="text-4xl font-black text-gray-900 dark:text-white mb-2">{totalCount}</div>
+            <div className="text-xs font-medium text-gray-400">Total seluruh data QCR</div>
           </div>
 
-          {/* Search + Filters */}
-          <div className="flex flex-wrap gap-2">
-            <input
-              type="text"
-              placeholder="Cari dept, type wheel, purpose..."
-              value={searchTerm}
-              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="flex-1 min-w-[200px] h-9 px-3 border border-gray-200 dark:border-white/10 rounded-lg text-sm bg-gray-50 dark:bg-white/5 text-gray-800 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all placeholder:text-gray-400"
-            />
-            {[
-              { label: "Status", value: filterStatus, set: setFilterStatus, opts: ["All", "Pending", "Received", "Rejected"] },
-              { label: "Urgency", value: filterUrgency, set: setFilterUrgency, opts: ["All", "Top urgent", "Urgent", "Reguler"] },
-              { label: "Dept", value: filterDept, set: setFilterDept, opts: ["All", "Dies Assurance", "PE Casting", "PE Machining", "PE Painting", "Prod. Casting", "Prod. Machining", "Prod. Painting", "PPIC / Shipment", "Equipment Assurance"] },
-            ].map(({ label, value, set, opts }) => (
-              <select
-                key={label}
-                value={value}
-                onChange={e => { set(e.target.value); setCurrentPage(1); }}
-                className="h-9 px-3 pr-8 border border-gray-200 dark:border-white/10 rounded-lg text-xs font-medium bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer"
-              >
-                {opts.map(o => <option key={o} value={o}>{o === "All" ? `Semua ${label}` : o}</option>)}
-              </select>
-            ))}
-
-            {/* Date range */}
-            <div className="flex items-center gap-1">
-              <input ref={dateRef} type="text" placeholder="Pilih tanggal..." readOnly
-                className="h-9 w-44 px-3 border border-gray-200 dark:border-white/10 rounded-lg text-xs bg-gray-50 dark:bg-white/5 text-gray-800 dark:text-white outline-none focus:border-blue-500 cursor-pointer" />
-              {(dateRange[0] || dateRange[1]) && (
-                <button onClick={clearDate} className="h-9 px-2 text-gray-400 hover:text-gray-600 text-xs border border-gray-200 rounded-lg bg-gray-50 dark:bg-white/5 transition-colors">✕</button>
-              )}
+          {/* Card: Statistik per Dept */}
+          <div className="flex-1 bg-white dark:bg-[#121212] border border-gray-200 dark:border-white/10 rounded-2xl p-6 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-bold text-gray-500 tracking-wider">STATISTIK PER DEPT / SECTION</h3>
+              <span className="text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-2 py-1 rounded-full">{Object.keys(grouped).length} Dept</span>
+            </div>
+            <div className="flex-1 overflow-y-auto pr-2 max-h-[120px] qcr-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+                {Object.entries(grouped).sort((a, b) => b[1].total - a[1].total).map(([dept, stats]) => {
+                  const pendPct = stats.total > 0 ? (stats.pending / stats.total) * 100 : 0;
+                  const recvPct = stats.total > 0 ? (stats.received / stats.total) * 100 : 0;
+                  const rejPct  = stats.total > 0 ? (stats.rejected / stats.total) * 100 : 0;
+                  return (
+                    <div key={dept} className="flex flex-col gap-1.5 p-3 rounded-xl bg-gray-50/50 dark:bg-white/2 border border-gray-100 dark:border-white/5">
+                      <div className="flex items-end justify-between">
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate max-w-[120px]" title={dept}>{dept}</span>
+                        <span className="text-[11px] font-bold text-gray-500 shrink-0 ml-1">{stats.total} REQ</span>
+                      </div>
+                      <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-gray-200 dark:bg-white/10 my-1">
+                        {stats.pending > 0 && <div className="bg-blue-500 h-full" style={{ width: `${pendPct}%` }} />}
+                        {stats.received > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${recvPct}%` }} />}
+                        {stats.rejected > 0 && <div className="bg-red-500 h-full" style={{ width: `${rejPct}%` }} />}
+                      </div>
+                      <div className="flex justify-between text-[9px] font-extrabold tracking-widest">
+                        <span className="text-blue-600 dark:text-blue-400">P:{stats.pending}</span>
+                        <span className="text-emerald-600 dark:text-emerald-400">R:{stats.received}</span>
+                        <span className="text-red-500 dark:text-red-400">X:{stats.rejected}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ── Table ─────────────────────────────────────────────────────── */}
-        <div className="overflow-x-auto">
-          <Table>
+        {/* ── Action Bar ─────────────────────────────────────────── */}
+        <div className="flex flex-col gap-4">
+
+          {/* Row 1: Search + Filters + Export */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="relative w-full sm:w-72">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              </div>
+              <input type="text"
+                className="block w-full p-2.5 pl-9 text-sm text-gray-900 border border-gray-200 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500 dark:bg-[#121212] dark:border-white/10 dark:placeholder-gray-500 dark:text-white outline-none transition-colors"
+                placeholder="Cari dept, type wheel, purpose..."
+                value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {([
+                { key: "dept", label: "Dept", value: filterDept, set: setFilterDept, opts: ["All","Dies Assurance","PE Casting","PE Machining","PE Painting","Prod. Casting","Prod. Machining","Prod. Painting","PPIC / Shipment","Equipment Assurance"] },
+                { key: "status", label: "Status", value: filterStatus, set: setFilterStatus, opts: ["All","Pending","Received","Rejected"] },
+                { key: "urgency", label: "Urgency", value: filterUrgency, set: setFilterUrgency, opts: ["All","Top urgent","Urgent","Reguler"] },
+              ] as const).map(({ key, label, value, set, opts }) => (
+                <div key={key} className="relative border border-gray-200 dark:border-white/10 rounded-lg bg-white dark:bg-[#121212] overflow-hidden">
+                  <select value={value} onChange={e => set(e.target.value)}
+                    className={`appearance-none block w-full px-3 py-2.5 pr-8 text-sm bg-transparent focus:outline-none cursor-pointer ${
+                      value !== "All" ? "text-blue-700 dark:text-blue-300 font-semibold" : "text-gray-900 dark:text-white"
+                    }`}>
+                    <option value="All">{label}</option>
+                    {opts.filter(o => o !== "All").map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
+                  </div>
+                </div>
+              ))}
+              <button onClick={exportCSV}
+                className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 transition-colors whitespace-nowrap">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Export
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2: Date Range + Presets */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-white dark:bg-[#121212] border border-gray-200 dark:border-white/10 rounded-xl">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tanggal</span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap flex-1">
+              <div className={`relative flex items-center gap-2 border rounded-lg px-3 py-2 min-w-[240px] transition-colors cursor-pointer ${
+                (dateFrom || dateTo) ? "border-sky-400 bg-sky-50 dark:bg-sky-900/20 dark:border-sky-600" : "border-gray-200 dark:border-white/10 bg-white dark:bg-[#1a1a1a] hover:border-gray-300"
+              }`}>
+                <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <input ref={datePickerRef} type="text" readOnly placeholder="Pilih rentang tanggal..."
+                  className={`flex-1 text-sm font-medium bg-transparent outline-none cursor-pointer min-w-0 ${
+                    (dateFrom || dateTo) ? "text-sky-700 dark:text-sky-300" : "text-gray-400 dark:text-gray-500"
+                  }`}
+                />
+                {(dateFrom || dateTo) && (
+                  <button onClick={e => { e.stopPropagation(); clearDateFilter(); }} className="shrink-0 text-sky-400 hover:text-sky-600 transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-400 font-medium hidden sm:block">Cepat:</span>
+                {(["today","7d","30d","month"] as const).map(p => (
+                  <button key={p} onClick={() => applyPreset(p)}
+                    className="px-2.5 py-1.5 text-xs font-semibold rounded-md border transition-all border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-sky-400 hover:bg-sky-50 hover:text-sky-700 dark:hover:bg-sky-900/20">
+                    {p === "today" ? "Hari Ini" : p === "7d" ? "7 Hari" : p === "30d" ? "30 Hari" : "Bulan Ini"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 3: Stats + Filter Chips + Rows per page */}
+          <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span>Total {total} records</span>
+              {(dateFrom || dateTo) && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 text-xs font-semibold ring-1 ring-sky-200 dark:ring-sky-700">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  {dateFrom && dateTo ? (dateFrom === dateTo ? dateFrom : `${dateFrom} — ${dateTo}`) : dateFrom ? `Dari ${dateFrom}` : `Sampai ${dateTo}`}
+                  <button onClick={clearDateFilter} className="hover:text-sky-900 transition-colors"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                </span>
+              )}
+              {filterDept !== "All" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs font-semibold ring-1 ring-blue-200 dark:ring-blue-700">
+                  Dept: {filterDept}
+                  <button onClick={() => setFilterDept("All")} className="hover:text-blue-900 transition-colors"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                </span>
+              )}
+              {filterStatus !== "All" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs font-semibold ring-1 ring-blue-200 dark:ring-blue-700">
+                  Status: {filterStatus}
+                  <button onClick={() => setFilterStatus("All")} className="hover:text-blue-900 transition-colors"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                </span>
+              )}
+              {filterUrgency !== "All" && (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ring-1 ${
+                  filterUrgency === "Top urgent" ? "bg-red-50 text-red-700 ring-red-200 dark:bg-red-900/30 dark:text-red-300 dark:ring-red-700"
+                  : filterUrgency === "Urgent" ? "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-700"
+                  : "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-700"
+                }`}>
+                  {filterUrgency}
+                  <button onClick={() => setFilterUrgency("All")} className="hover:opacity-70 transition-opacity"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                </span>
+              )}
+              {(filterDept !== "All" || filterStatus !== "All" || filterUrgency !== "All" || dateFrom || dateTo) && (
+                <button onClick={() => { setFilterDept("All"); setFilterStatus("All"); setFilterUrgency("All"); clearDateFilter(); }}
+                  className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline underline-offset-2 transition-colors">
+                  Reset semua
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              Rows per page:
+              <select value={rowsPerPage} onChange={e => setRowsPerPage(Number(e.target.value))}
+                className="bg-transparent border-none focus:outline-none cursor-pointer text-gray-700 dark:text-gray-300">
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Table ───────────────────────────────────────────────── */}
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/5 dark:bg-[#121212]">
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader className="border-b border-gray-100 dark:border-white/5">
               <TableRow>
                 {["NO", "TANGGAL", "DEPT / SECTION", "TYPE WHEEL", "URGENCY", "PROCESS", "STATUS"].map(h => (
@@ -333,7 +507,8 @@ export default function TableQCR() {
                 </tr>
               ))}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </div>
 
         {/* ── Pagination ────────────────────────────────────────────────── */}
