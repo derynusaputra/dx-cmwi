@@ -132,6 +132,8 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Copy-Item "$ScriptDir\be\*" "$AppDir\be\" -Recurse -Force
 Copy-Item "$ScriptDir\fe\*" "$AppDir\fe\" -Recurse -Force
 Copy-Item "$ScriptDir\.env" "$AppDir\.env" -Force
+# Perbaikan: Pastikan backend menggunakan .env root (local)
+Copy-Item "$ScriptDir\.env" "$AppDir\be\.env" -Force
 Write-OK "File aplikasi disalin ke $AppDir"
 
 # =============================================================================
