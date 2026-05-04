@@ -9,6 +9,8 @@ import (
 type User struct {
 	ID           uint           `gorm:"primaryKey" json:"id"`
 	Username     string         `gorm:"uniqueIndex;size:50;not null" json:"username"`
+	Name         string         `gorm:"size:100" json:"name"`
+	DeptSection  string         `gorm:"size:100" json:"dept_section"`
 	PasswordHash string         `gorm:"not null" json:"-"`
 	Roles        StringArray    `gorm:"type:jsonb;not null;default:'[\"operator\"]'" json:"roles"`
 	CreatedAt    time.Time      `json:"created_at"`

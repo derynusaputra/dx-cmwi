@@ -20,7 +20,7 @@ var allowedDocExts = map[string]bool{
 	".jpg": true, ".jpeg": true, ".png": true, ".webp": true, ".gif": true,
 }
 
-const maxFileSize = 10 << 20 // 10 MB
+const maxFileSize = 5 << 20 // 5 MB
 
 func UploadFile(c *gin.Context) {
 	file, err := c.FormFile("file")
@@ -30,7 +30,7 @@ func UploadFile(c *gin.Context) {
 	}
 
 	if file.Size > maxFileSize {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Ukuran file maksimal 10MB"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Ukuran file maksimal 5MB"})
 		return
 	}
 

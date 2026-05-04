@@ -60,3 +60,41 @@ func AuthRequired() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// RequireRole returns a middleware that allows access only if the authenticated user
+// has at least one of the specified roles. superadmin and admin always bypass this check.
+//
+// Usage:
+//   qcr.PUT("/:id/approve", middleware.RequireRole("re_mg", "qc_gl", "qc_spv", "qc_amg"), handlers.ApproveQCR)
+func RequireRole(allowed ...string) gin.HandlerFunc {
+	allowedSet := make(map[string]struct{}, len(allowed))
+	for _, r := range allowed {
+		allowedSet[r] = struct{}{}
+	}
+
+	return func(c *gin.Context) {
+		userRoles, _ := c.Get("roles")
+		roles, _ := userRoles.([]string)
+
+		// superadmin and admin always bypass role checks
+		for _, r := range roles {
+			if r == "superadmin" || r == "admin" {
+				c.Next()
+				return
+			}
+		}
+
+		// Check if user has at least one of the allowed roles
+		for _, r := range roles {
+			if _, ok := allowedSet[r]; ok {
+				c.Next()
+				return
+			}
+		}
+
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Akses ditolak. Role yang diizinkan: " + strings.Join(allowed, ", "),
+		})
+		c.Abort()
+	}
+}

@@ -19,6 +19,8 @@ export default function UnifiedSignIn() {
   // Form Data
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('');
 
   // Hydrate tablet detector
   useEffect(() => {
@@ -39,7 +41,22 @@ export default function UnifiedSignIn() {
       const { data } = await apiClient.post('/auth/login', { username, password });
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      const roles = data.user.roles || [];
+      const isOperator = roles.includes('operator');
+
+      // Validasi Akses
+      if (intendedRole === 'operator' && !isOperator) {
+        alert('Akses Ditolak: Mode ini hanya untuk Operator.');
+        await apiClient.post('/auth/logout').catch(() => {});
+        return;
+      }
+
+      if (intendedRole === 'admin' && isOperator && roles.length === 1) {
+        alert('Akses Ditolak: Operator tidak dapat masuk ke Mode Admin.');
+        await apiClient.post('/auth/logout').catch(() => {});
+        return;
+      }
     
       setAuth(data.accessToken, data.user);
       document.cookie = `active_role=${intendedRole}; path=/; max-age=86400`; 
@@ -54,7 +71,9 @@ export default function UnifiedSignIn() {
 
   const registerMutation = useMutation({
     mutationFn: async () => {
-      const { data } = await apiClient.post('/auth/register', { username, password });
+      const finalRole = intendedRole === 'operator' ? 'operator' : role;
+      const payload = { username, password, name, roles: finalRole ? [finalRole] : [] };
+      const { data } = await apiClient.post('/auth/register', payload);
       return data;
     },
     onSuccess: () => {
@@ -181,6 +200,26 @@ export default function UnifiedSignIn() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Input Name (Only for Register) */}
+              {step === 'register' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1.5">Nama Lengkap <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <RiUser3Line size={18} className="text-gray-400" />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="Masukkan nama lengkap"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className={`w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 dark:bg-white/5 focus:ring-4 outline-none transition-all bg-gray-50 dark:text-white ${intendedRole === 'operator' ? 'focus:border-orange-500 focus:ring-orange-500/10' : 'focus:border-[#4f46e5] focus:ring-[#4f46e5]/10'} focus:bg-white dark:focus:bg-[#1a1a1a]`}
+                      required={step === 'register'}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Input Email */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1.5">Email/Username <span className="text-red-500">*</span></label>
@@ -219,6 +258,31 @@ export default function UnifiedSignIn() {
                   </button>
                 </div>
               </div>
+
+              {/* Input Role (Only for Register and Admin) */}
+              {step === 'register' && intendedRole !== 'operator' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1.5">Role <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      className={`w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 dark:bg-white/5 focus:ring-4 outline-none transition-all bg-gray-50 dark:text-white appearance-none focus:border-[#4f46e5] focus:ring-[#4f46e5]/10 focus:bg-white dark:focus:bg-[#1a1a1a]`}
+                      required={step === 'register'}
+                    >
+                      <option value="" disabled>Pilih Role</option>
+                      <option value="gl">Group Leader (gl)</option>
+                      <option value="spv">Supervisor (spv)</option>
+                      <option value="amg">Assistant Manager (amg)</option>
+                      <option value="req">Requester (req)</option>
+                      <option value="re_mg">Request Manager (req_mg)</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
+                      <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Options */}
               {step === 'login' && (

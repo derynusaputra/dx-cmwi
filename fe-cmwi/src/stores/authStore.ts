@@ -3,6 +3,8 @@ import { create } from 'zustand';
 interface User {
   id: number;
   username: string;
+  name?: string;
+  dept_section?: string;
   roles: string[];
 }
 

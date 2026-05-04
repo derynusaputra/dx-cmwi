@@ -4,7 +4,7 @@ import './globals.css';
 import "flatpickr/dist/flatpickr.css";
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
-import { Metadata } from 'next';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/axios';
@@ -26,21 +26,27 @@ export default function RootLayout({
   const { accessToken, setAuth } = useAuthStore();
   const [init, setInit] = useState(false);
 
-  // Silently login user on app hard refresh from local storage if memory is wiped
+  // Silently restore session on hard refresh (accessToken wiped from memory)
+  // Only runs once on mount — accessToken intentionally excluded from deps
   useEffect(() => {
     const initializeAuth = async () => {
-      if (!accessToken && document.cookie.includes('refresh_token')) {
+      if (document.cookie.includes('refresh_token')) {
         try {
           const { data } = await apiClient.post('/auth/refresh');
           setAuth(data.accessToken, data.user);
         } catch (e) {
-          // Token expired or not found, proceed rendering unauthenticated
+          // Refresh token invalid/expired — clear all auth cookies so middleware
+          // can correctly redirect to /signin on next navigation
+          document.cookie = 'refresh_token=; path=/; max-age=0';
+          document.cookie = 'active_role=; path=/; max-age=0';
+          document.cookie = 'intended_role=; path=/; max-age=0';
         }
       }
       setInit(true);
     };
     initializeAuth();
-  }, [accessToken, setAuth]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Intentionally run once on mount only
   
   return (
     <html lang="en">

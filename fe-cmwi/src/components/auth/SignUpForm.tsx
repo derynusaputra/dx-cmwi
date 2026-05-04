@@ -85,31 +85,17 @@ export default function SignUpForm() {
             </div>
             <form>
               <div className="space-y-5">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  {/* <!-- First Name --> */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      First Name<span className="text-error-500">*</span>
-                    </Label>
-                    <Input
-                      type="text"
-                      id="fname"
-                      name="fname"
-                      placeholder="Enter your first name"
-                    />
-                  </div>
-                  {/* <!-- Last Name --> */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      Last Name<span className="text-error-500">*</span>
-                    </Label>
-                    <Input
-                      type="text"
-                      id="lname"
-                      name="lname"
-                      placeholder="Enter your last name"
-                    />
-                  </div>
+                {/* <!-- Name --> */}
+                <div>
+                  <Label>
+                    Name<span className="text-error-500">*</span>
+                  </Label>
+                  <Input
+                    type="text"
+                    id="name"
+                    name="name"
+                    placeholder="Enter your full name"
+                  />
                 </div>
                 {/* <!-- Email --> */}
                 <div>
@@ -132,6 +118,8 @@ export default function SignUpForm() {
                     <Input
                       placeholder="Enter your password"
                       type={showPassword ? "text" : "password"}
+                      id="password"
+                      name="password"
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -142,6 +130,30 @@ export default function SignUpForm() {
                       ) : (
                         <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400" />
                       )}
+                    </span>
+                  </div>
+                </div>
+                {/* <!-- Role --> */}
+                <div>
+                  <Label>
+                    Role<span className="text-error-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <select
+                      id="role"
+                      name="role"
+                      className="w-full h-11 px-4 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-gray-800 dark:text-white/90 appearance-none transition-colors shadow-theme-xs"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>Select your role</option>
+                      <option value="gl">Group Leader (gl)</option>
+                      <option value="svp">Supervisor (svp)</option>
+                      <option value="amg">Assistant Manager (amg)</option>
+                      <option value="req">Requester (req)</option>
+                      <option value="req_mg">Request Manager (req_mg)</option>
+                    </select>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                      <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </span>
                   </div>
                 </div>

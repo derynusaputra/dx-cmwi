@@ -26,10 +26,13 @@ func main() {
 		&models.PaintingInspection{},
 		&models.Approval{},
 		&models.QCR{},
+		&models.QCRAssignment{},
+		&models.QCRApproval{},
 	)
 
 	config.SeedDefaultUsers()
 	config.SeedApprovalUsers()
+	config.SeedQCRUsers()
 
 	r := gin.Default()
 

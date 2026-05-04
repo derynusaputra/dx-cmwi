@@ -22,6 +22,7 @@ type LoginRequest struct {
 type RegisterRequest struct {
 	Username string   `json:"username" binding:"required"`
 	Password string   `json:"password" binding:"required,min=4"`
+	Name     string   `json:"name"`
 	Roles    []string `json:"roles"`
 }
 
@@ -88,9 +89,11 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken": accessToken,
 		"user": gin.H{
-			"id":       user.ID,
-			"username": user.Username,
-			"roles":    user.Roles,
+			"id":           user.ID,
+			"username":     user.Username,
+			"name":         user.Name,
+			"dept_section": user.DeptSection,
+			"roles":        user.Roles,
 		},
 	})
 }
@@ -122,6 +125,7 @@ func Register(c *gin.Context) {
 	user := models.User{
 		Username:     req.Username,
 		PasswordHash: string(hashed),
+		Name:         req.Name,
 		Roles:        roles,
 	}
 	if err := config.DB.Create(&user).Error; err != nil {
@@ -166,9 +170,11 @@ func RefreshTokenHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken": accessToken,
 		"user": gin.H{
-			"id":       user.ID,
-			"username": user.Username,
-			"roles":    user.Roles,
+			"id":           user.ID,
+			"username":     user.Username,
+			"name":         user.Name,
+			"dept_section": user.DeptSection,
+			"roles":        user.Roles,
 		},
 	})
 }
